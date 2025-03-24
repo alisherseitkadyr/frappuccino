@@ -1,4 +1,3 @@
-// internal/api/handlers/reports.go
 package handlers
 
 import (
@@ -6,7 +5,6 @@ import (
 	"hot-coffee/internal/service"
 	"log/slog"
 	"net/http"
-	"strconv"
 )
 
 type ReportsHandler struct {
@@ -18,40 +16,37 @@ func NewReportsHandler(svc service.ReportsService) *ReportsHandler {
 }
 
 func (h *ReportsHandler) GetTotalSales(w http.ResponseWriter, r *http.Request) {
-	total, err := h.service.GetTotalSales()
+	totalSales, err := h.service.GetTotalSales()
 	if err != nil {
-		slog.Error("Failed to calculate total sales", "error", err)
-		http.Error(w, "Failed to calculate total sales", http.StatusInternalServerError)
+		slog.Error("Failed to get total sales", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	response := map[string]float64{"total_sales": total}
+	response := struct {
+		TotalSales float64 `json:"total_sales"`
+	}{
+		TotalSales: totalSales,
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode response", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func (h *ReportsHandler) GetPopularItems(w http.ResponseWriter, r *http.Request) {
-	limitStr := r.URL.Query().Get("limit")
-	limit := 0
-
-	if limitStr != "" {
-		var err error
-		limit, err = strconv.Atoi(limitStr)
-		if err != nil {
-			slog.Error("Invalid limit parameter", "limit", limitStr, "error", err)
-			http.Error(w, "Invalid limit parameter", http.StatusBadRequest)
-			return
-		}
-	}
-
-	items, err := h.service.GetPopularItems(limit)
+	popularItems, err := h.service.GetPopularItems(3) // Default to top 3
 	if err != nil {
 		slog.Error("Failed to get popular items", "error", err)
-		http.Error(w, "Failed to get popular items", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(items)
+	if err := json.NewEncoder(w).Encode(popularItems); err != nil {
+		slog.Error("Failed to encode response", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"hot-coffee/internal/service"
+	"hot-coffee/internal/api/handlers"
 )
 
 func NewRouter(
@@ -13,49 +14,32 @@ func NewRouter(
 ) http.Handler {
 	mux := http.NewServeMux()
 
+	// Initialize handlers
+	orderHandler := handlers.NewOrderHandler(orderSvc)
+	menuHandler := handlers.NewMenuHandler(menuSvc)
+	inventoryHandler := handlers.NewInventoryHandler(inventorySvc)
+	reportsHandler := handlers.NewReportsHandler(reportsSvc)
+
 	// Order endpoints
-	mux.HandleFunc("POST /orders", makeHandlerFunc(orderSvc.CreateOrder))
-	mux.HandleFunc("GET /orders", makeHandlerFunc(orderSvc.GetOrders))
-	mux.HandleFunc("GET /orders/{id}", makeHandlerFunc(orderSvc.GetOrder))
-	mux.HandleFunc("PUT /orders/{id}", makeHandlerFunc(orderSvc.UpdateOrder))
-	mux.HandleFunc("DELETE /orders/{id}", makeHandlerFunc(orderSvc.DeleteOrder))
-	mux.HandleFunc("POST /orders/{id}/close", makeHandlerFunc(orderSvc.CloseOrder))
+	mux.HandleFunc("POST /orders", orderHandler.CreateOrder)
+	mux.HandleFunc("GET /orders", orderHandler.GetOrders)
+	mux.HandleFunc("GET /orders/{id}", orderHandler.GetOrder)
+	mux.HandleFunc("PUT /orders/{id}", orderHandler.UpdateOrder)
+	mux.HandleFunc("DELETE /orders/{id}", orderHandler.DeleteOrder)
+	mux.HandleFunc("POST /orders/{id}/close", orderHandler.CloseOrder)
 
 	// Menu endpoints
-	mux.HandleFunc("GET /menu", makeHandlerFunc(menuSvc.GetMenuItems))
-	mux.HandleFunc("GET /menu/{id}", makeHandlerFunc(menuSvc.GetMenuItem))
+	mux.HandleFunc("GET /menu", menuHandler.GetMenuItems)
+	mux.HandleFunc("GET /menu/{id}", menuHandler.GetMenuItem)
 
 	// Inventory endpoints
-	mux.HandleFunc("GET /inventory", makeHandlerFunc(inventorySvc.GetInventoryItems))
-	mux.HandleFunc("GET /inventory/{id}", makeHandlerFunc(inventorySvc.GetInventoryItem))
-	mux.HandleFunc("PUT /inventory/{id}", makeHandlerFunc(inventorySvc.UpdateInventoryItem))
+	mux.HandleFunc("GET /inventory", inventoryHandler.GetInventoryItems)
+	mux.HandleFunc("GET /inventory/{id}", inventoryHandler.GetInventoryItem)
+	mux.HandleFunc("PUT /inventory/{id}", inventoryHandler.UpdateInventoryItem)
 
 	// Reports endpoints
-	mux.HandleFunc("GET /reports/total-sales", makeHandlerFunc(reportsSvc.GetTotalSales))
-	mux.HandleFunc("GET /reports/popular-items", makeHandlerFunc(func() (interface{}, error) {
-		return reportsSvc.GetPopularItems(3) // Top 3 popular items
-	}))
+	mux.HandleFunc("GET /reports/total-sales", reportsHandler.GetTotalSales)
+	mux.HandleFunc("GET /reports/popular-items", reportsHandler.GetPopularItems)
 
 	return mux
-}
-
-type apiHandlerFunc func(w http.ResponseWriter, r *http.Request) error
-
-func makeHandlerFunc[T any](handler func() (T, error)) apiHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		result, err := handler()
-		if err != nil {
-			return err
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		return json.NewEncoder(w).Encode(result)
-	}
-}
-
-func (f apiHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := f(w, r); err != nil {
-		// Handle errors appropriately
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
 }
