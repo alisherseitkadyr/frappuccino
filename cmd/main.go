@@ -7,6 +7,7 @@ import (
 	"hot-coffee/internal/api"
 	"hot-coffee/internal/repository"
 	"hot-coffee/internal/service"
+	"hot-coffee/internal/utils"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,6 +23,8 @@ func main() {
 		printUsage()
 		return
 	}
+
+	utils.Createdb(*dataDir)
 
 	// Initialize repositories
 	orderRepo := repository.NewOrderRepository(*dataDir)
