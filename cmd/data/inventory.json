@@ -2,13 +2,13 @@
   {
     "ingredient_id": "coffee_beans",
     "name": "Coffee Beans",
-    "quantity": 1000,
+    "quantity": 900,
     "unit": "g"
   },
   {
     "ingredient_id": "water",
     "name": "Water",
-    "quantity": 5000,
+    "quantity": 4700,
     "unit": "ml"
   },
   {

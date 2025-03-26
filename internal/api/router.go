@@ -1,9 +1,9 @@
 package api
 
 import (
-	"net/http"
-	"hot-coffee/internal/service"
 	"hot-coffee/internal/api/handlers"
+	"hot-coffee/internal/service"
+	"net/http"
 )
 
 func NewRouter(
@@ -29,13 +29,18 @@ func NewRouter(
 	mux.HandleFunc("POST /orders/{id}/close", orderHandler.CloseOrder)
 
 	// Menu endpoints
+	mux.HandleFunc("POST /menu", menuHandler.CreateMenuItem)
 	mux.HandleFunc("GET /menu", menuHandler.GetMenuItems)
 	mux.HandleFunc("GET /menu/{id}", menuHandler.GetMenuItem)
+	mux.HandleFunc("PUT /menu/{id}", menuHandler.UpdateMenuItem)
+	mux.HandleFunc("DELETE /menu/{id}", menuHandler.DeleteMenuItem)
 
 	// Inventory endpoints
+	mux.HandleFunc("POST /inventory", inventoryHandler.CreateInventoryItem)
 	mux.HandleFunc("GET /inventory", inventoryHandler.GetInventoryItems)
 	mux.HandleFunc("GET /inventory/{id}", inventoryHandler.GetInventoryItem)
 	mux.HandleFunc("PUT /inventory/{id}", inventoryHandler.UpdateInventoryItem)
+	mux.HandleFunc("DELETE /inventory/{id}", inventoryHandler.DeleteInventoryItem)
 
 	// Reports endpoints
 	mux.HandleFunc("GET /reports/total-sales", reportsHandler.GetTotalSales)
