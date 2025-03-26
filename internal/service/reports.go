@@ -1,8 +1,8 @@
 package service
 
 import (
-	"hot-coffee/models"
 	"hot-coffee/internal/repository"
+	"hot-coffee/models"
 )
 
 type ReportsService interface {
@@ -78,16 +78,16 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 
 	// Create a list of menu items with their popularity
 	var popularItems []struct {
-		MenuItem  models.MenuItem
+		MenuItem   models.MenuItem
 		OrderCount int
 	}
 
 	for _, menuItem := range menuItems {
 		popularItems = append(popularItems, struct {
-			MenuItem  models.MenuItem
+			MenuItem   models.MenuItem
 			OrderCount int
 		}{
-			MenuItem:  menuItem,
+			MenuItem:   menuItem,
 			OrderCount: popularity[menuItem.ID],
 		})
 	}

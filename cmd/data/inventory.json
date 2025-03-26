@@ -1,0 +1,20 @@
+[
+  {
+    "ingredient_id": "coffee_beans",
+    "name": "Coffee Beans",
+    "quantity": 1000,
+    "unit": "g"
+  },
+  {
+    "ingredient_id": "water",
+    "name": "Water",
+    "quantity": 5000,
+    "unit": "ml"
+  },
+  {
+    "ingredient_id": "milk",
+    "name": "Milk",
+    "quantity": 3000,
+    "unit": "ml"
+  }
+]

@@ -1,16 +1,18 @@
-// cmd/main.go
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"hot-coffee/internal/api"
-	"hot-coffee/internal/repository"
-	"hot-coffee/internal/service"
-	"hot-coffee/internal/utils"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
+
+	"hot-coffee/internal/api"
+	"hot-coffee/internal/repository"
+	"hot-coffee/internal/service"
+	"hot-coffee/models"
 )
 
 func main() {
@@ -24,7 +26,17 @@ func main() {
 		return
 	}
 
-	utils.Createdb(*dataDir)
+	// Create data directory if it doesn't exist
+	if err := os.MkdirAll(*dataDir, 0755); err != nil {
+		slog.Error("Failed to create data directory", "error", err)
+		os.Exit(1)
+	}
+
+	// Initialize data files with empty arrays if they don't exist
+	if err := initDataFiles(*dataDir); err != nil {
+		slog.Error("Failed to initialize data files", "error", err)
+		os.Exit(1)
+	}
 
 	// Initialize repositories
 	orderRepo := repository.NewOrderRepository(*dataDir)
@@ -40,11 +52,94 @@ func main() {
 	// Initialize router
 	router := api.NewRouter(orderSvc, menuSvc, inventorySvc, reportsSvc)
 
-	slog.Info("Starting server", "port", *port, "dataDir", *dataDir)
+	slog.Info("Starting server", "port", *port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), router); err != nil {
 		slog.Error("Failed to start server", "error", err)
 		os.Exit(1)
 	}
+}
+
+func initDataFiles(dataDir string) error {
+	// Initialize orders.json
+	ordersFile := filepath.Join(dataDir, "orders.json")
+	if _, err := os.Stat(ordersFile); os.IsNotExist(err) {
+		if err := writeEmptyArrayToFile(ordersFile); err != nil {
+			return fmt.Errorf("failed to initialize orders.json: %w", err)
+		}
+	}
+
+	// Initialize menu_items.json with sample data if empty
+	menuFile := filepath.Join(dataDir, "menu_items.json")
+	if _, err := os.Stat(menuFile); os.IsNotExist(err) {
+		sampleMenu := []models.MenuItem{
+			{
+				ID:          "espresso",
+				Name:        "Espresso",
+				Description: "Strong coffee shot",
+				Price:       2.50,
+				Ingredients: []models.MenuItemIngredient{
+					{IngredientID: "coffee_beans", Quantity: 10},
+					{IngredientID: "water", Quantity: 30},
+				},
+			},
+			{
+				ID:          "latte",
+				Name:        "Latte",
+				Description: "Espresso with steamed milk",
+				Price:       3.50,
+				Ingredients: []models.MenuItemIngredient{
+					{IngredientID: "coffee_beans", Quantity: 10},
+					{IngredientID: "water", Quantity: 30},
+					{IngredientID: "milk", Quantity: 200},
+				},
+			},
+		}
+		if err := writeToFile(menuFile, sampleMenu); err != nil {
+			return fmt.Errorf("failed to initialize menu_items.json: %w", err)
+		}
+	}
+
+	// Initialize inventory.json with sample data if empty
+	inventoryFile := filepath.Join(dataDir, "inventory.json")
+	if _, err := os.Stat(inventoryFile); os.IsNotExist(err) {
+		sampleInventory := []models.InventoryItem{
+			{
+				IngredientID: "coffee_beans",
+				Name:        "Coffee Beans",
+				Quantity:    1000,
+				Unit:        "g",
+			},
+			{
+				IngredientID: "water",
+				Name:        "Water",
+				Quantity:    5000,
+				Unit:        "ml",
+			},
+			{
+				IngredientID: "milk",
+				Name:        "Milk",
+				Quantity:    3000,
+				Unit:        "ml",
+			},
+		}
+		if err := writeToFile(inventoryFile, sampleInventory); err != nil {
+			return fmt.Errorf("failed to initialize inventory.json: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func writeEmptyArrayToFile(filePath string) error {
+	return writeToFile(filePath, []interface{}{})
+}
+
+func writeToFile(filePath string, data interface{}) error {
+	file, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, file, 0644)
 }
 
 func printUsage() {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
 	"log/slog"
@@ -36,59 +37,82 @@ func NewOrderService(
 }
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
-	// Validate order items
-	for _, item := range order.Items {
-		_, err := s.menuRepo.GetByID(item.ProductID)
-		if err != nil {
-			slog.Error("Invalid product ID in order", "product_id", item.ProductID, "error", err)
-			return models.Order{}, errors.New("invalid product ID in order items")
-		}
+    // Validate required fields
+    if order.CustomerName == "" {
+        return models.Order{}, errors.New("customer_name is required")
+    }
+
+    if len(order.Items) == 0 {
+        return models.Order{}, errors.New("order must contain at least one item")
+    }
+
+    // Validate each item
+    for _, item := range order.Items {
+        if item.Quantity <= 0 {
+            return models.Order{}, errors.New("quantity must be positive")
+        }
+
+        menuItem, err := s.menuRepo.GetByID(item.ProductID)
+        if err != nil {
+            slog.Error("Invalid product ID", 
+                "product_id", item.ProductID, 
+                "error", err)
+            return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
+        }
+
+        // Check ingredients for each menu item
+        for _, ingredient := range menuItem.Ingredients {
+            invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
+            if err != nil {
+                slog.Error("Inventory item not found",
+                    "ingredient_id", ingredient.IngredientID,
+                    "error", err)
+                return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
+            }
+
+            needed := ingredient.Quantity * float64(item.Quantity)
+            if invItem.Quantity < needed {
+                return models.Order{}, fmt.Errorf(
+                    "not enough %s. Need %.2f%s, have %.2f%s",
+                    invItem.Name,
+                    needed,
+                    invItem.Unit,
+                    invItem.Quantity,
+                    invItem.Unit,
+                )
+            }
+        }
+    }
+
+    // Deduct inventory (only if all checks pass)
+    for _, item := range order.Items {
+        menuItem, _ := s.menuRepo.GetByID(item.ProductID)
+        for _, ingredient := range menuItem.Ingredients {
+            invItem, _ := s.inventoryRepo.GetByID(ingredient.IngredientID)
+            invItem.Quantity -= ingredient.Quantity * float64(item.Quantity)
+            s.inventoryRepo.Update(invItem)
+        }
+    }
+
+    // Set order defaults
+    order.Status = "open"
+    order.CreatedAt = time.Now().Format(time.RFC3339)
+
+    // Create order
+    createdOrder, err := s.orderRepo.Create(order)
+    if err != nil {
+        slog.Error("Failed to save order", "error", err)
+        return models.Order{}, errors.New("failed to save order")
+    }
+
+    return createdOrder, nil
+}
+
+func formatQuantity(quantity float64, unit string) string {
+	if quantity == float64(int(quantity)) {
+		return fmt.Sprintf("%d%s", int(quantity), unit)
 	}
-
-	// Check inventory
-	ingredientsNeeded := make(map[string]float64)
-	for _, item := range order.Items {
-		menuItem, err := s.menuRepo.GetByID(item.ProductID)
-		if err != nil {
-			return models.Order{}, err
-		}
-
-		for _, ingredient := range menuItem.Ingredients {
-			ingredientsNeeded[ingredient.IngredientID] += ingredient.Quantity * float64(item.Quantity)
-		}
-	}
-
-	// Verify inventory levels
-	for ingredientID, needed := range ingredientsNeeded {
-		inventoryItem, err := s.inventoryRepo.GetByID(ingredientID)
-		if err != nil {
-			return models.Order{}, err
-		}
-
-		if inventoryItem.Quantity < needed {
-			return models.Order{}, errors.New("insufficient inventory for ingredient " + inventoryItem.Name)
-		}
-	}
-
-	// Deduct inventory
-	for ingredientID, needed := range ingredientsNeeded {
-		inventoryItem, err := s.inventoryRepo.GetByID(ingredientID)
-		if err != nil {
-			return models.Order{}, err
-		}
-
-		inventoryItem.Quantity -= needed
-		if _, err := s.inventoryRepo.Update(inventoryItem); err != nil {
-			return models.Order{}, err
-		}
-	}
-
-	// Set order defaults
-	order.Status = "open"
-	order.CreatedAt = time.Now().Format(time.RFC3339)
-
-	// Create order
-	return s.orderRepo.Create(order)
+	return fmt.Sprintf("%.2f%s", quantity, unit)
 }
 
 func (s *orderService) GetOrders() ([]models.Order, error) {
@@ -120,6 +144,10 @@ func (s *orderService) CloseOrder(id string) (models.Order, error) {
 	order, err := s.orderRepo.GetByID(id)
 	if err != nil {
 		return models.Order{}, err
+	}
+
+	if order.Status == "closed" {
+		return models.Order{}, errors.New("order is already closed")
 	}
 
 	order.Status = "closed"
