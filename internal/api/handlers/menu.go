@@ -56,7 +56,8 @@ func (h *MenuHandler) GetMenuItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) GetMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/")
+	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	id = strings.TrimSuffix(r.URL.Path, "}")
 	if id == "" {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return
@@ -77,7 +78,8 @@ func (h *MenuHandler) GetMenuItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) UpdateMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/")
+	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	id = strings.TrimSuffix(r.URL.Path, "}")
 	if id == "" {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return
@@ -105,7 +107,8 @@ func (h *MenuHandler) UpdateMenuItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) DeleteMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/")
+	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	id = strings.TrimSuffix(r.URL.Path, "}")
 	if id == "" {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return

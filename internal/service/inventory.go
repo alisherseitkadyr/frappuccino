@@ -7,7 +7,7 @@ import (
 )
 
 type InventoryService interface {
-	CreateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
+	CreateInventoryItem(name string, quantity float64, unit string) (models.InventoryItem, error)
 	GetInventoryItems() ([]models.InventoryItem, error)
 	GetInventoryItem(id string) (models.InventoryItem, error)
 	UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
@@ -22,19 +22,19 @@ func NewInventoryService(repo repository.InventoryRepository) InventoryService {
 	return &inventoryService{repo: repo}
 }
 
-func (s *inventoryService) CreateInventoryItem(item models.InventoryItem) (models.InventoryItem, error) {
-	if item.IngredientID == "" {
-		return models.InventoryItem{}, errors.New("ingredient_id is required")
-	}
-	if item.Name == "" {
+func (s *inventoryService) CreateInventoryItem(name string, quantity float64, unit string) (models.InventoryItem, error) {
+	if name == "" {
 		return models.InventoryItem{}, errors.New("name is required")
 	}
-	if item.Quantity < 0 {
+	if quantity < 0 {
 		return models.InventoryItem{}, errors.New("quantity cannot be negative")
 	}
-	if item.Unit == "" {
+	if unit == "" {
 		return models.InventoryItem{}, errors.New("unit is required")
 	}
+
+	// Create new inventory item with generated ID
+	item := models.NewInventoryItem(name, quantity, unit)
 
 	return s.repo.Create(item)
 }

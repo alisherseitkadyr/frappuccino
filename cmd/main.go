@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log/slog"
-	"net/http"
-	"os"
-	"path/filepath"
-
 	"hot-coffee/internal/api"
 	"hot-coffee/internal/repository"
 	"hot-coffee/internal/service"
 	"hot-coffee/models"
+	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -27,7 +26,7 @@ func main() {
 	}
 
 	// Create data directory if it doesn't exist
-	if err := os.MkdirAll(*dataDir, 0755); err != nil {
+	if err := os.MkdirAll(*dataDir, 0o755); err != nil {
 		slog.Error("Failed to create data directory", "error", err)
 		os.Exit(1)
 	}
@@ -105,21 +104,21 @@ func initDataFiles(dataDir string) error {
 		sampleInventory := []models.InventoryItem{
 			{
 				IngredientID: "coffee_beans",
-				Name:        "Coffee Beans",
-				Quantity:    1000,
-				Unit:        "g",
+				Name:         "Coffee Beans",
+				Quantity:     1000,
+				Unit:         "g",
 			},
 			{
 				IngredientID: "water",
-				Name:        "Water",
-				Quantity:    5000,
-				Unit:        "ml",
+				Name:         "Water",
+				Quantity:     5000,
+				Unit:         "ml",
 			},
 			{
 				IngredientID: "milk",
-				Name:        "Milk",
-				Quantity:    3000,
-				Unit:        "ml",
+				Name:         "Milk",
+				Quantity:     3000,
+				Unit:         "ml",
 			},
 		}
 		if err := writeToFile(inventoryFile, sampleInventory); err != nil {
@@ -139,7 +138,7 @@ func writeToFile(filePath string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filePath, file, 0644)
+	return os.WriteFile(filePath, file, 0o644)
 }
 
 func printUsage() {

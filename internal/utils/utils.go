@@ -28,11 +28,11 @@ func Createdb(s string) {
 // Проверка валидности имени директории
 func isValidDirectoryName(name string) (bool, error) {
 	reservedNames := map[string]bool{
-		"cmd":                              true,
-		"internal":                         true,
-		"models":                           true,
-		"go.mod":                           true,
-		"README.md":                        true,
+		"cmd":       true,
+		"internal":  true,
+		"models":    true,
+		"go.mod":    true,
+		"README.md": true,
 		// filepath.Join("cmd", "hot-coffee"): true,
 	}
 
@@ -64,7 +64,7 @@ func isValidDirectoryName(name string) (bool, error) {
 func InitializeDB(dataDir string) error {
 	dataPath := filepath.Join("..", dataDir)
 
-		// If directory exists — remove it
+	// If directory exists — remove it
 	if _, err := os.Stat(dataPath); err == nil {
 		if err := os.RemoveAll(dataPath); err != nil {
 			return fmt.Errorf("failed to remove old directory: %w", err)
@@ -89,6 +89,3 @@ func InitializeDB(dataDir string) error {
 	slog.Info("Data directory and files initialized", "path", dataPath)
 	return nil
 }
-
-
-

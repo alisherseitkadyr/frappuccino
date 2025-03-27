@@ -56,7 +56,8 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/orders/")
+	id := strings.TrimPrefix(r.URL.Path, "/orders/{")
+	id = strings.TrimSuffix(id, "}")
 	if id == "" {
 		http.Error(w, "Order ID is required", http.StatusBadRequest)
 		return
@@ -77,7 +78,8 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/orders/")
+	id := strings.TrimPrefix(r.URL.Path, "/orders/{")
+	id = strings.TrimSuffix(id, "}")
 	if id == "" {
 		http.Error(w, "Order ID is required", http.StatusBadRequest)
 		return
@@ -105,7 +107,8 @@ func (h *OrderHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/orders/")
+	id := strings.TrimPrefix(r.URL.Path, "/orders/{")
+	id = strings.TrimSuffix(id, "}")
 	if id == "" {
 		http.Error(w, "Order ID is required", http.StatusBadRequest)
 		return
@@ -121,8 +124,8 @@ func (h *OrderHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) CloseOrder(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/orders/")
-	id = strings.TrimSuffix(id, "/close")
+	id := strings.TrimPrefix(r.URL.Path, "/orders/{")
+	id = strings.TrimSuffix(id, "}/close")
 	if id == "" {
 		http.Error(w, "Order ID is required", http.StatusBadRequest)
 		return

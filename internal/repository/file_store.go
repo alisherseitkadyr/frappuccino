@@ -43,5 +43,5 @@ func (fs *FileStore) Write(data interface{}) error {
 		return err
 	}
 
-	return os.WriteFile(fs.filePath, file, 0644)
+	return os.WriteFile(fs.filePath, file, 0o644)
 }

@@ -23,16 +23,13 @@ func NewMenuService(repo repository.MenuRepository) MenuService {
 }
 
 func (s *menuService) CreateMenuItem(item models.MenuItem) (models.MenuItem, error) {
-	if item.ID == "" {
-		return models.MenuItem{}, errors.New("product_id is required")
-	}
 	if item.Name == "" {
 		return models.MenuItem{}, errors.New("name is required")
 	}
 	if item.Price <= 0 {
 		return models.MenuItem{}, errors.New("price must be positive")
 	}
-
+	item.ID = generateOrderID()
 	return s.repo.Create(item)
 }
 

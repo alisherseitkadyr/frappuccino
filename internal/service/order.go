@@ -37,75 +37,84 @@ func NewOrderService(
 }
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
-    // Validate required fields
-    if order.CustomerName == "" {
-        return models.Order{}, errors.New("customer_name is required")
-    }
+	// Validate required fields
+	if order.CustomerName == "" {
+		return models.Order{}, errors.New("customer_name is required")
+	}
 
-    if len(order.Items) == 0 {
-        return models.Order{}, errors.New("order must contain at least one item")
-    }
+	if len(order.Items) == 0 {
+		return models.Order{}, errors.New("order must contain at least one item")
+	}
 
-    // Validate each item
-    for _, item := range order.Items {
-        if item.Quantity <= 0 {
-            return models.Order{}, errors.New("quantity must be positive")
-        }
+	// Validate each item
+	for _, item := range order.Items {
+		if item.Quantity <= 0 {
+			return models.Order{}, errors.New("quantity must be positive")
+		}
 
-        menuItem, err := s.menuRepo.GetByID(item.ProductID)
-        if err != nil {
-            slog.Error("Invalid product ID", 
-                "product_id", item.ProductID, 
-                "error", err)
-            return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
-        }
+		menuItem, err := s.menuRepo.GetByID(item.ProductID)
+		if err != nil {
+			slog.Error("Invalid product ID",
+				"product_id", item.ProductID,
+				"error", err)
+			return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
+		}
 
-        // Check ingredients for each menu item
-        for _, ingredient := range menuItem.Ingredients {
-            invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
-            if err != nil {
-                slog.Error("Inventory item not found",
-                    "ingredient_id", ingredient.IngredientID,
-                    "error", err)
-                return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
-            }
+		// Check ingredients for each menu item
+		for _, ingredient := range menuItem.Ingredients {
+			invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
+			if err != nil {
+				slog.Error("Inventory item not found",
+					"ingredient_id", ingredient.IngredientID,
+					"error", err)
+				return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
+			}
 
-            needed := ingredient.Quantity * float64(item.Quantity)
-            if invItem.Quantity < needed {
-                return models.Order{}, fmt.Errorf(
-                    "not enough %s. Need %.2f%s, have %.2f%s",
-                    invItem.Name,
-                    needed,
-                    invItem.Unit,
-                    invItem.Quantity,
-                    invItem.Unit,
-                )
-            }
-        }
-    }
+			needed := ingredient.Quantity * float64(item.Quantity)
+			if invItem.Quantity < needed {
+				return models.Order{}, fmt.Errorf(
+					"not enough %s. Need %.2f%s, have %.2f%s",
+					invItem.Name,
+					needed,
+					invItem.Unit,
+					invItem.Quantity,
+					invItem.Unit,
+				)
+			}
+		}
+	}
 
-    // Deduct inventory (only if all checks pass)
-    for _, item := range order.Items {
-        menuItem, _ := s.menuRepo.GetByID(item.ProductID)
-        for _, ingredient := range menuItem.Ingredients {
-            invItem, _ := s.inventoryRepo.GetByID(ingredient.IngredientID)
-            invItem.Quantity -= ingredient.Quantity * float64(item.Quantity)
-            s.inventoryRepo.Update(invItem)
-        }
-    }
+	// Generate a new order ID
+	order.ID = generateOrderID()
+	order.Status = "open"
+	order.CreatedAt = time.Now().Format(time.RFC3339)
 
-    // Set order defaults
-    order.Status = "open"
-    order.CreatedAt = time.Now().Format(time.RFC3339)
+	// Deduct inventory (only if all checks pass)
+	for _, item := range order.Items {
+		menuItem, _ := s.menuRepo.GetByID(item.ProductID)
+		for _, ingredient := range menuItem.Ingredients {
+			invItem, _ := s.inventoryRepo.GetByID(ingredient.IngredientID)
+			invItem.Quantity -= ingredient.Quantity * float64(item.Quantity)
+			if _, err := s.inventoryRepo.Update(invItem); err != nil {
+				slog.Error("Failed to update inventory", "error", err)
+				return models.Order{}, fmt.Errorf("failed to update inventory: %v", err)
+			}
+		}
+	}
 
-    // Create order
-    createdOrder, err := s.orderRepo.Create(order)
-    if err != nil {
-        slog.Error("Failed to save order", "error", err)
-        return models.Order{}, errors.New("failed to save order")
-    }
+	// Create order
+	createdOrder, err := s.orderRepo.Create(order)
+	if err != nil {
+		slog.Error("Failed to save order", "error", err)
+		return models.Order{}, errors.New("failed to save order")
+	}
 
-    return createdOrder, nil
+	return createdOrder, nil
+}
+
+// generateOrderID creates a unique order ID using current timestamp
+func generateOrderID() string {
+	return fmt.Sprintf("order_%d", time.Now().UnixNano())
 }
 
 func formatQuantity(quantity float64, unit string) string {
