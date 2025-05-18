@@ -4,39 +4,46 @@ import (
 	"time"
 )
 
+type OrderStatus string
+
+const (
+	StatusPending    OrderStatus = "pending"
+	StatusProcessing OrderStatus = "processing"
+	StatusClosed     OrderStatus = "closed"
+	StatusCancelled  OrderStatus = "cancelled"
+)
+
 type Order struct {
-	ID           string      `json:"order_id"`
-	CustomerName string      `json:"customer_name"`
-	Items        []OrderItem `json:"items"`
-	Status       string      `json:"status"`
-	CreatedAt    string      `json:"created_at"`
+	ID           int64          // ID будет заполнен после вставки в БД
+	CustomerName string      
+	Items        []OrderItem
+	TotalPrice   float64
+	Status       OrderStatus 
+	CreatedAt    time.Time   
 }
 
 type OrderItem struct {
-	ProductID string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
+	ProductID int64 
+	Quantity  int  
 }
 
 type OrderRequest struct {
-	CustomerName string             `json:"customer_name"`
-	Items        []OrderItemRequest `json:"items"`
+	CustomerName string           
+	Items        []OrderItemRequest 
 }
 
 type OrderItemRequest struct {
-	ProductID string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
+	ProductID int64 
+	Quantity  int   
 }
 
+// NewOrder создаёт объект заказа с начальным статусом "pending" и текущим временем.
 func NewOrder(customerName string, items []OrderItem) Order {
 	return Order{
-		ID:           generateOrderID(),
+		ID:           0, // ID присвоит база
 		CustomerName: customerName,
 		Items:        items,
-		Status:       "open",
-		CreatedAt:    time.Now().Format(time.RFC3339),
+		Status:       StatusPending,
+		CreatedAt:    time.Now(),
 	}
-}
-
-func generateOrderID() string {
-	return "order_" + time.Now().Format("20060102150405")
 }

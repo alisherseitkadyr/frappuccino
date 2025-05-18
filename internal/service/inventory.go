@@ -2,16 +2,16 @@ package service
 
 import (
 	"errors"
-	"hot-coffee/internal/repository"
-	"hot-coffee/models"
+	"frappuccino/internal/repository"
+	"frappuccino/models"
 )
 
 type InventoryService interface {
 	CreateInventoryItem(name string, quantity float64, unit string) (models.InventoryItem, error)
 	GetInventoryItems() ([]models.InventoryItem, error)
-	GetInventoryItem(id string) (models.InventoryItem, error)
+	GetInventoryItem(id int64) (models.InventoryItem, error)
 	UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
-	DeleteInventoryItem(id string) error
+	DeleteInventoryItem(id int64) error
 }
 
 type inventoryService struct {
@@ -43,14 +43,36 @@ func (s *inventoryService) GetInventoryItems() ([]models.InventoryItem, error) {
 	return s.repo.GetAll()
 }
 
-func (s *inventoryService) GetInventoryItem(id string) (models.InventoryItem, error) {
+func (s *inventoryService) GetInventoryItem(id int64) (models.InventoryItem, error) {
+	if id == 0 {
+		return models.InventoryItem{}, errors.New("id is required")
+	}
 	return s.repo.GetByID(id)
 }
 
+func (s *inventoryService) DeleteInventoryItem(id int64) error {
+	if id == 0 {
+		return errors.New("id is required")
+	}
+	return s.repo.Delete(id)
+}
+
+
 func (s *inventoryService) UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error) {
+	if item.IngredientID == 0 {
+		return models.InventoryItem{}, errors.New("id is required")
+	}
+	if item.Name == "" {
+		return models.InventoryItem{}, errors.New("name is required")
+	}
+	if item.Quantity < 0 {
+		return models.InventoryItem{}, errors.New("quantity cannot be negative")
+	}
+	if item.Unit == "" {
+		return models.InventoryItem{}, errors.New("unit is required")
+	}
+
 	return s.repo.Update(item)
 }
 
-func (s *inventoryService) DeleteInventoryItem(id string) error {
-	return s.repo.Delete(id)
-}
+

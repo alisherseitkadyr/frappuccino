@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
-	"hot-coffee/internal/service"
-	"hot-coffee/models"
+	"frappuccino/internal/service"
+	"frappuccino/models"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
+
 )
 
 type InventoryHandler struct {
@@ -65,9 +67,15 @@ func (h *InventoryHandler) GetInventoryItems(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *InventoryHandler) GetInventoryItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/inventory/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/inventory/{")
+	n = strings.TrimSuffix(n, "}")
+	id, err := strconv.ParseInt(n, 10, 64)
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if id == 0 {
 		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
 		return
 	}
@@ -87,9 +95,14 @@ func (h *InventoryHandler) GetInventoryItem(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/inventory/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/inventory/{")
+	n = strings.TrimSuffix(n, "}")
+	id, err := strconv.ParseInt(n, 10, 64)
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+	if id == 0 {
 		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
 		return
 	}
@@ -122,9 +135,16 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 }
 
 func (h *InventoryHandler) DeleteInventoryItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/inventory/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/inventory/{")
+	n = strings.TrimSuffix(n, "}")
+	id, err := strconv.ParseInt(n, 10, 64)
+
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if id == 0 {
 		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
 		return
 	}

@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"hot-coffee/internal/service"
+	"frappuccino/internal/service"
 	"log/slog"
 	"net/http"
 )

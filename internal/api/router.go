@@ -1,8 +1,8 @@
 package api
 
 import (
-	"hot-coffee/internal/api/handlers"
-	"hot-coffee/internal/service"
+	"frappuccino/internal/api/handlers"
+	"frappuccino/internal/service"
 	"net/http"
 )
 

@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"hot-coffee/internal/service"
-	"hot-coffee/models"
+	"frappuccino/internal/service"
+	"frappuccino/models"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -56,9 +57,14 @@ func (h *MenuHandler) GetMenuItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) GetMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	n = strings.TrimSuffix(n, "}")
+	id, err := strconv.ParseInt(n, 10, 64)
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+	if id == 0 {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return
 	}
@@ -78,9 +84,16 @@ func (h *MenuHandler) GetMenuItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) UpdateMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	n = strings.TrimSuffix(n, "}")
+
+	id, err := strconv.ParseInt(n, 10, 64)
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if id == 0 {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return
 	}
@@ -107,9 +120,16 @@ func (h *MenuHandler) UpdateMenuItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MenuHandler) DeleteMenuItem(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/menu/{")
-	id = strings.TrimSuffix(r.URL.Path, "}")
-	if id == "" {
+	n := strings.TrimPrefix(r.URL.Path, "/menu/{")
+	n = strings.TrimSuffix(n, "}")
+
+	id, err := strconv.ParseInt(n, 10, 64)
+	if err != nil {
+		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if id == 0 {
 		http.Error(w, "Menu item ID is required", http.StatusBadRequest)
 		return
 	}

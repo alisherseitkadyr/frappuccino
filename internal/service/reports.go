@@ -1,8 +1,9 @@
 package service
 
 import (
-	"hot-coffee/internal/repository"
-	"hot-coffee/models"
+	"frappuccino/internal/repository"
+	"frappuccino/models"
+	"sort"
 )
 
 type ReportsService interface {
@@ -25,6 +26,7 @@ func NewReportsService(
 	}
 }
 
+// GetTotalSales подсчитывает сумму выручки по всем закрытым заказам
 func (s *reportsService) GetTotalSales() (float64, error) {
 	orders, err := s.orderRepo.GetAll()
 	if err != nil {
@@ -36,7 +38,8 @@ func (s *reportsService) GetTotalSales() (float64, error) {
 		return 0, err
 	}
 
-	menuItemMap := make(map[string]models.MenuItem)
+	// Создаем мапу для быстрого поиска цены по ID товара
+	menuItemMap := make(map[int64]models.MenuItem, len(menuItems))
 	for _, item := range menuItems {
 		menuItemMap[item.ID] = item
 	}
@@ -55,6 +58,7 @@ func (s *reportsService) GetTotalSales() (float64, error) {
 	return totalSales, nil
 }
 
+// GetPopularItems возвращает топ-N популярных товаров по количеству заказов
 func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 	orders, err := s.orderRepo.GetAll()
 	if err != nil {
@@ -66,8 +70,8 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 		return nil, err
 	}
 
-	// Count how many times each item was ordered
-	popularity := make(map[string]int)
+	// Подсчитываем количество заказов каждого товара
+	popularity := make(map[int64]int)
 	for _, order := range orders {
 		if order.Status == "closed" {
 			for _, item := range order.Items {
@@ -76,36 +80,33 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 		}
 	}
 
-	// Create a list of menu items with their popularity
-	var popularItems []struct {
+	// Создаем срез с данными о популярности для сортировки
+	type popularItem struct {
 		MenuItem   models.MenuItem
 		OrderCount int
 	}
 
+	popularItems := make([]popularItem, 0, len(menuItems))
 	for _, menuItem := range menuItems {
-		popularItems = append(popularItems, struct {
-			MenuItem   models.MenuItem
-			OrderCount int
-		}{
+		count := popularity[menuItem.ID]
+		popularItems = append(popularItems, popularItem{
 			MenuItem:   menuItem,
-			OrderCount: popularity[menuItem.ID],
+			OrderCount: count,
 		})
 	}
 
-	// Sort by popularity (simplified for this example)
-	// In a real implementation, we'd use a proper sorting algorithm
-	for i := 0; i < len(popularItems); i++ {
-		for j := i + 1; j < len(popularItems); j++ {
-			if popularItems[i].OrderCount < popularItems[j].OrderCount {
-				popularItems[i], popularItems[j] = popularItems[j], popularItems[i]
-			}
-		}
-	}
+	// Сортируем по убыванию популярности
+	sort.Slice(popularItems, func(i, j int) bool {
+		return popularItems[i].OrderCount > popularItems[j].OrderCount
+	})
 
-	// Return top N items
-	result := make([]models.MenuItem, 0, limit)
-	for i := 0; i < limit && i < len(popularItems); i++ {
-		result = append(result, popularItems[i].MenuItem)
+	// Формируем результат с ограничением по limit
+	if limit > len(popularItems) {
+		limit = len(popularItems)
+	}
+	result := make([]models.MenuItem, limit)
+	for i := 0; i < limit; i++ {
+		result[i] = popularItems[i].MenuItem
 	}
 
 	return result, nil

@@ -1,75 +1,81 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"hot-coffee/internal/repository"
-	"hot-coffee/models"
+	"frappuccino/internal/repository"
+	"frappuccino/models"
 	"log/slog"
-	"time"
+	// "time"
 )
 
 type OrderService interface {
 	CreateOrder(order models.Order) (models.Order, error)
 	GetOrders() ([]models.Order, error)
-	GetOrder(id string) (models.Order, error)
-	UpdateOrder(id string, order models.Order) (models.Order, error)
-	DeleteOrder(id string) error
-	CloseOrder(id string) (models.Order, error)
+	GetOrder(id int64) (models.Order, error)
+	UpdateOrder(id int64, order models.Order) (models.Order, error)
+	DeleteOrder(id int64) error
+	CloseOrder(id int64) (models.Order, error)
 }
 
 type orderService struct {
 	orderRepo     repository.OrderRepository
 	menuRepo      repository.MenuRepository
 	inventoryRepo repository.InventoryRepository
+	db            *sql.DB // Для транзакций
 }
 
 func NewOrderService(
 	orderRepo repository.OrderRepository,
 	menuRepo repository.MenuRepository,
 	inventoryRepo repository.InventoryRepository,
+	db *sql.DB,
 ) OrderService {
 	return &orderService{
 		orderRepo:     orderRepo,
 		menuRepo:      menuRepo,
 		inventoryRepo: inventoryRepo,
+		db:            db,
 	}
 }
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
-	// Validate required fields
+	// Валидация входных данных
 	if order.CustomerName == "" {
 		return models.Order{}, errors.New("customer_name is required")
 	}
-
 	if len(order.Items) == 0 {
 		return models.Order{}, errors.New("order must contain at least one item")
 	}
 
-	// Validate each item
+	// Получим меню для всех позиций заказа один раз, кэшируя в map
+	menuCache := make(map[int64]models.MenuItem)
+
 	for _, item := range order.Items {
 		if item.Quantity <= 0 {
 			return models.Order{}, errors.New("quantity must be positive")
 		}
 
-		menuItem, err := s.menuRepo.GetByID(item.ProductID)
-		if err != nil {
-			slog.Error("Invalid product ID",
-				"product_id", item.ProductID,
-				"error", err)
-			return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
+		menuItem, ok := menuCache[item.ProductID]
+		if !ok {
+			var err error
+			menuItem, err = s.menuRepo.GetByID(item.ProductID)
+			if err != nil {
+				slog.Error("Invalid product ID", "product_id", item.ProductID, "error", err)
+				return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
+			}
+			menuCache[item.ProductID] = menuItem
 		}
 
-		// Check ingredients for each menu item
+		// Проверяем ингредиенты и их наличие в инвентаре
 		for _, ingredient := range menuItem.Ingredients {
 			invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
 			if err != nil {
-				slog.Error("Inventory item not found",
-					"ingredient_id", ingredient.IngredientID,
-					"error", err)
+				slog.Error("Inventory item not found", "ingredient_id", ingredient.IngredientID, "error", err)
 				return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
 			}
-
 			needed := ingredient.Quantity * float64(item.Quantity)
 			if invItem.Quantity < needed {
 				return models.Order{}, fmt.Errorf(
@@ -84,72 +90,106 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 		}
 	}
 
-	// Generate a new order ID
-	order.ID = generateOrderID()
+	// Генерируем ID заказа и выставляем статус, дату создания
+	// order.ID = generateOrderID()
 	order.Status = "open"
-	order.CreatedAt = time.Now().Format(time.RFC3339)
+	// order.CreatedAt = time.Now().Format(time.RFC3339)
 
-	// Deduct inventory (only if all checks pass)
+	// Используем транзакцию для списания инвентаря и создания заказа
+	tx, err := s.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		slog.Error("Failed to begin transaction", "error", err)
+		return models.Order{}, errors.New("failed to start transaction")
+	}
+
+	// Функция отката транзакции в случае ошибки
+	rollback := func(err error) (models.Order, error) {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			slog.Error("Failed to rollback transaction", "error", rbErr)
+		}
+		return models.Order{}, err
+	}
+
+	// Списываем ингредиенты
 	for _, item := range order.Items {
-		menuItem, _ := s.menuRepo.GetByID(item.ProductID)
+		menuItem := menuCache[item.ProductID]
 		for _, ingredient := range menuItem.Ingredients {
-			invItem, _ := s.inventoryRepo.GetByID(ingredient.IngredientID)
-			invItem.Quantity -= ingredient.Quantity * float64(item.Quantity)
-			if _, err := s.inventoryRepo.Update(invItem); err != nil {
-				slog.Error("Failed to update inventory", "error", err)
-				return models.Order{}, fmt.Errorf("failed to update inventory: %v", err)
+			invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
+			if err != nil {
+				return rollback(fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID))
 			}
+			needed := ingredient.Quantity * float64(item.Quantity)
+			invItem.Quantity -= needed
+			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem) // Метод обновления с транзакцией
+			if err != nil {
+				slog.Error("Failed to update inventory", "error", err)
+				return rollback(fmt.Errorf("failed to update inventory: %v", err))
+			}
+			_ = updatedInv // Не используем, но можем логировать если нужно
 		}
 	}
 
-	// Create order
-	createdOrder, err := s.orderRepo.Create(order)
+	// Создаём заказ в рамках транзакции
+	createdOrder, err := s.orderRepo.CreateTx(tx, order)
 	if err != nil {
 		slog.Error("Failed to save order", "error", err)
-		return models.Order{}, errors.New("failed to save order")
+		return rollback(errors.New("failed to save order"))
+	}
+
+	// Коммит транзакции
+	if err := tx.Commit(); err != nil {
+		slog.Error("Failed to commit transaction", "error", err)
+		return models.Order{}, errors.New("failed to commit transaction")
 	}
 
 	return createdOrder, nil
 }
 
-// generateOrderID creates a unique order ID using current timestamp
-func generateOrderID() string {
-	return fmt.Sprintf("order_%d", time.Now().UnixNano())
-}
-
-func formatQuantity(quantity float64, unit string) string {
-	if quantity == float64(int(quantity)) {
-		return fmt.Sprintf("%d%s", int(quantity), unit)
-	}
-	return fmt.Sprintf("%.2f%s", quantity, unit)
-}
+// func generateOrderID() int64 {
+// 	return fmt.Sprintf("order_%d", time.Now().UnixNano())
+// }
 
 func (s *orderService) GetOrders() ([]models.Order, error) {
 	return s.orderRepo.GetAll()
 }
 
-func (s *orderService) GetOrder(id string) (models.Order, error) {
+func (s *orderService) GetOrder(id int64) (models.Order, error) {
+	if id == 0{
+		return models.Order{}, errors.New("id is required")
+	}
 	return s.orderRepo.GetByID(id)
 }
 
-func (s *orderService) UpdateOrder(id string, order models.Order) (models.Order, error) {
+func (s *orderService) UpdateOrder(id int64, order models.Order) (models.Order, error) {
+	if id == 0{
+		return models.Order{}, errors.New("id is required")
+	}
+
 	existingOrder, err := s.orderRepo.GetByID(id)
 	if err != nil {
 		return models.Order{}, err
 	}
 
-	// Preserve some fields
+	// Сохраняем ID, CreatedAt и Status без изменений
 	order.ID = existingOrder.ID
 	order.CreatedAt = existingOrder.CreatedAt
+	order.Status = existingOrder.Status
 
 	return s.orderRepo.Update(id, order)
 }
 
-func (s *orderService) DeleteOrder(id string) error {
+func (s *orderService) DeleteOrder(id int64) error {
+	if id == 0 {
+		return errors.New("id is required")
+	}
 	return s.orderRepo.Delete(id)
 }
 
-func (s *orderService) CloseOrder(id string) (models.Order, error) {
+func (s *orderService) CloseOrder(id int64) (models.Order, error) {
+	if id == 0 {
+		return models.Order{}, errors.New("id is required")
+	}
+
 	order, err := s.orderRepo.GetByID(id)
 	if err != nil {
 		return models.Order{}, err

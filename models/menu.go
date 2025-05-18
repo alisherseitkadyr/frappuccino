@@ -1,38 +1,37 @@
-// models/menu.go
 package models
 
 import "time"
 
 type MenuItem struct {
-	ID          string               `json:"product_id"`
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	Price       float64              `json:"price"`
-	Ingredients []MenuItemIngredient `json:"ingredients"`
+	ID          int64
+	Name        string
+	Description string
+	Categories  []string
+	Price       float64
+	Ingredients []MenuItemIngredient
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type MenuItemIngredient struct {
-	IngredientID string  `json:"ingredient_id"`
-	Quantity     float64 `json:"quantity"`
+	IngredientID int64
+	Quantity     float64
 }
 
 type MenuItemRequest struct {
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	Price       float64              `json:"price"`
-	Ingredients []MenuItemIngredient `json:"ingredients"`
+	Name        string
+	Description string
+	Categories  []string
+	Price       float64
+	Ingredients []MenuItemIngredient
 }
 
 func NewMenuItem(name, description string, price float64, ingredients []MenuItemIngredient) MenuItem {
 	return MenuItem{
-		ID:          generateProductID(),
+		ID:          0,
 		Name:        name,
 		Description: description,
 		Price:       price,
 		Ingredients: ingredients,
 	}
-}
-
-func generateProductID() string {
-	return "prod_" + time.Now().Format("20060102150405")
 }

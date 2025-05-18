@@ -1,102 +1,94 @@
 package repository
 
 import (
-	"hot-coffee/models"
+    "database/sql"
+    "frappuccino/models"
 )
 
 type InventoryRepository interface {
-	Create(item models.InventoryItem) (models.InventoryItem, error)
-	GetAll() ([]models.InventoryItem, error)
-	GetByID(id string) (models.InventoryItem, error)
-	Update(item models.InventoryItem) (models.InventoryItem, error)
-	Delete(id string) error
+    Create(item models.InventoryItem) (models.InventoryItem, error)
+    GetAll() ([]models.InventoryItem, error)
+    GetByID(id int64) (models.InventoryItem, error)
+    Update(item models.InventoryItem) (models.InventoryItem, error)
+    UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) // 👈 добавь этот метод
+    Delete(id int64) error
 }
 
 type inventoryRepository struct {
-	store *FileStore
+    db *sql.DB
 }
 
-func NewInventoryRepository(dataDir string) InventoryRepository {
-	return &inventoryRepository{
-		store: NewFileStore(dataDir + "/inventory.json"),
-	}
+func NewInventoryRepository(db *sql.DB) InventoryRepository {
+    return &inventoryRepository{db: db}
 }
 
 func (r *inventoryRepository) Create(item models.InventoryItem) (models.InventoryItem, error) {
-	items, err := r.GetAll()
-	if err != nil {
-		return models.InventoryItem{}, err
-	}
-
-	// Check for duplicate ID
-	for _, existing := range items {
-		if existing.IngredientID == item.IngredientID {
-			return models.InventoryItem{}, ErrDuplicateID
-		}
-	}
-
-	items = append(items, item)
-	if err := r.store.Write(items); err != nil {
-		return models.InventoryItem{}, err
-	}
-
-	return item, nil
+    query := `INSERT INTO inventory (name, quantity) VALUES ($1, $2) RETURNING id`
+    err := r.db.QueryRow(query, item.Name, item.Quantity).Scan(&item.IngredientID)
+    return item, err
 }
 
 func (r *inventoryRepository) GetAll() ([]models.InventoryItem, error) {
-	var items []models.InventoryItem
-	if err := r.store.Read(&items); err != nil {
-		return nil, err
-	}
-	return items, nil
+    query := `SELECT id, name, quantity FROM inventory`
+    rows, err := r.db.Query(query)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var items []models.InventoryItem
+    for rows.Next() {
+        var item models.InventoryItem
+        if err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity); err != nil {
+            return nil, err
+        }
+        items = append(items, item)
+    }
+    return items, nil
 }
 
-func (r *inventoryRepository) GetByID(id string) (models.InventoryItem, error) {
-	items, err := r.GetAll()
-	if err != nil {
-		return models.InventoryItem{}, err
-	}
-
-	for _, item := range items {
-		if item.IngredientID == id {
-			return item, nil
-		}
-	}
-
-	return models.InventoryItem{}, ErrNotFound
+func (r *inventoryRepository) GetByID(id int64) (models.InventoryItem, error) {
+    query := `SELECT id, name, quantity FROM inventory WHERE id = $1`
+    var item models.InventoryItem
+    err := r.db.QueryRow(query, id).Scan(&item.IngredientID, &item.Name, &item.Quantity)
+    if err == sql.ErrNoRows {
+        return models.InventoryItem{}, ErrNotFound
+    }
+    return item, err
 }
 
 func (r *inventoryRepository) Update(item models.InventoryItem) (models.InventoryItem, error) {
-	items, err := r.GetAll()
+    query := `UPDATE inventory SET name = $1, quantity = $2 WHERE id = $3`
+    result, err := r.db.Exec(query, item.Name, item.Quantity, item.IngredientID)
+    if err != nil {
+        return models.InventoryItem{}, err
+    }
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        return models.InventoryItem{}, ErrNotFound
+    }
+    return item, nil
+}
+
+func (r *inventoryRepository) Delete(id int64) error {
+    query := `DELETE FROM inventory WHERE id = $1`
+    result, err := r.db.Exec(query, id)
+    if err != nil {
+        return err
+    }
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        return ErrNotFound
+    }
+    return nil
+}
+
+
+func (r *inventoryRepository) UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) {
+	query := "UPDATE inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = ?"
+	_, err := tx.Exec(query, item.Quantity, item.IngredientID)
 	if err != nil {
 		return models.InventoryItem{}, err
 	}
-
-	for i, existing := range items {
-		if existing.IngredientID == item.IngredientID {
-			items[i] = item
-			if err := r.store.Write(items); err != nil {
-				return models.InventoryItem{}, err
-			}
-			return item, nil
-		}
-	}
-
-	return models.InventoryItem{}, ErrNotFound
-}
-
-func (r *inventoryRepository) Delete(id string) error {
-	items, err := r.GetAll()
-	if err != nil {
-		return err
-	}
-
-	for i, item := range items {
-		if item.IngredientID == id {
-			items = append(items[:i], items[i+1:]...)
-			return r.store.Write(items)
-		}
-	}
-
-	return ErrNotFound
+	return item, nil
 }

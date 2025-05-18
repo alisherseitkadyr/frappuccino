@@ -1,0 +1,18 @@
+FROM golang:1.22
+
+WORKDIR /app
+
+# Копируем go.mod и go.sum для скачивания зависимостей
+COPY go.mod ./
+
+RUN go mod download
+
+# Копируем остальной код
+COPY . .
+
+# Собираем бинарь из cmd/main.go (рабочая директория - /app)
+RUN go build -o main ./cmd/main.go
+
+EXPOSE 8080
+
+CMD ["./main"]
