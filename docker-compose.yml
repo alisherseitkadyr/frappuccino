@@ -2,9 +2,9 @@ version: '3.8'
 
 services:
   app:
-    build: 
+    build:
       context: .
-      dockerfile: Dockerfile.txt
+      dockerfile: Dockerfile.txt  # Ensure this points to the correct Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -16,6 +16,8 @@ services:
       - DATABASE_URL=postgres://latte:latte@db:5432/frappuccino?sslmode=disable
     depends_on:
       - db
+    # Ensure entrypoint is set correctly to use wait-for-it.sh
+    entrypoint: ["/wait-for-it.sh", "db:5432", "--timeout=30", "--", "./main"]
 
   db:
     image: postgres:15
