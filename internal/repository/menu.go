@@ -32,7 +32,7 @@ func (r *menuRepository) Create(item models.MenuItem) (models.MenuItem, error) {
 }
 
 func (r *menuRepository) GetAll() ([]models.MenuItem, error) {
-	query := `SELECT id, name, description, price FROM menu_items`
+	query := `SELECT product_id, name, description, price FROM menu_items`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (r *menuRepository) GetAll() ([]models.MenuItem, error) {
 }
 
 func (r *menuRepository) GetByID(id int64) (models.MenuItem, error) {
-	query := `SELECT id, name, description, price FROM menu_items WHERE id = $1`
+	query := `SELECT product_id, name, description, price FROM menu_items WHERE id = $1`
 	var item models.MenuItem
 	err := r.db.QueryRow(query, id).Scan(&item.ID, &item.Name, &item.Description, &item.Price)
 	if err == sql.ErrNoRows {
