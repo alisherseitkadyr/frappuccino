@@ -7,7 +7,7 @@ import (
 	"frappuccino/internal/api"
 	"frappuccino/internal/repository"
 	"frappuccino/internal/service"
-	"log/slog"
+	"log"
 	"net/http"
     _ "github.com/lib/pq"  // Postgres driver import for side effects only
 	"os"
@@ -27,14 +27,14 @@ func main() {
 	// Connect to the PostgreSQL database
 	db, err := sql.Open("postgres", *dbURL)
 	if err != nil {
-		slog.Error("Failed to open database connection", "error", err)
+		log.Printf("Failed to open database connection", "error", err)
 		os.Exit(1)
 	}
 	defer db.Close()
 
 	// Verify the connection is alive
 	if err := db.Ping(); err != nil {
-		slog.Error("Failed to ping database", "error", err)
+		log.Printf("Failed to ping database", "error", err)
 		os.Exit(1)
 	}
 
@@ -52,9 +52,9 @@ func main() {
 	// Initialize router
 	router := api.NewRouter(orderSvc, menuSvc, inventorySvc, reportsSvc)
 
-	slog.Info("Starting server", "port", *port)
+	log.Printf("Starting server", "port", *port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), router); err != nil {
-		slog.Error("Failed to start server", "error", err)
+		log.Printf("Failed to start server", "error", err)
 		os.Exit(1)
 	}
 }

@@ -3,7 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"log/slog"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -86,6 +86,6 @@ func InitializeDB(dataDir string) error {
 		}
 	}
 
-	slog.Info("Data directory and files initialized", "path", dataPath)
+	log.Printf("Data directory and files initialized", "path", dataPath)
 	return nil
 }

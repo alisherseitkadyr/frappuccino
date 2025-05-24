@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"frappuccino/internal/repository"
 	"frappuccino/models"
-	"log/slog"
-	// "time"
+	"log"
 )
 
 type OrderService interface {
@@ -43,7 +42,7 @@ func NewOrderService(
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 	// Валидация входных данных
-	if order.CustomerName == "" {
+	if order.Customer_name == "" {
 		return models.Order{}, errors.New("customer_name is required")
 	}
 	if len(order.Items) == 0 {
@@ -63,7 +62,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			var err error
 			menuItem, err = s.menuRepo.GetByID(item.ProductID)
 			if err != nil {
-				slog.Error("Invalid product ID", "product_id", item.ProductID, "error", err)
+				log.Printf("Invalid product ID", "product_id", item.ProductID, "error", err)
 				return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
 			}
 			menuCache[item.ProductID] = menuItem
@@ -73,7 +72,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 		for _, ingredient := range menuItem.Ingredients {
 			invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
 			if err != nil {
-				slog.Error("Inventory item not found", "ingredient_id", ingredient.IngredientID, "error", err)
+				log.Printf("Inventory item not found", "ingredient_id", ingredient.IngredientID, "error", err)
 				return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
 			}
 			needed := ingredient.Quantity * float64(item.Quantity)
@@ -98,14 +97,14 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 	// Используем транзакцию для списания инвентаря и создания заказа
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
-		slog.Error("Failed to begin transaction", "error", err)
+		log.Printf("Failed to begin transaction", "error", err)
 		return models.Order{}, errors.New("failed to start transaction")
 	}
 
 	// Функция отката транзакции в случае ошибки
 	rollback := func(err error) (models.Order, error) {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			slog.Error("Failed to rollback transaction", "error", rbErr)
+			log.Printf("Failed to rollback transaction", "error", rbErr)
 		}
 		return models.Order{}, err
 	}
@@ -122,7 +121,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			invItem.Quantity -= needed
 			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem) // Метод обновления с транзакцией
 			if err != nil {
-				slog.Error("Failed to update inventory", "error", err)
+				log.Printf("Failed to update inventory", "error", err)
 				return rollback(fmt.Errorf("failed to update inventory: %v", err))
 			}
 			_ = updatedInv // Не используем, но можем логировать если нужно
@@ -132,13 +131,13 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 	// Создаём заказ в рамках транзакции
 	createdOrder, err := s.orderRepo.CreateTx(tx, order)
 	if err != nil {
-		slog.Error("Failed to save order", "error", err)
+		log.Printf("Failed to save order", "error", err)
 		return rollback(errors.New("failed to save order"))
 	}
 
 	// Коммит транзакции
 	if err := tx.Commit(); err != nil {
-		slog.Error("Failed to commit transaction", "error", err)
+		log.Printf("Failed to commit transaction", "error", err)
 		return models.Order{}, errors.New("failed to commit transaction")
 	}
 
@@ -154,14 +153,14 @@ func (s *orderService) GetOrders() ([]models.Order, error) {
 }
 
 func (s *orderService) GetOrder(id int64) (models.Order, error) {
-	if id == 0{
+	if id == 0 {
 		return models.Order{}, errors.New("id is required")
 	}
 	return s.orderRepo.GetByID(id)
 }
 
 func (s *orderService) UpdateOrder(id int64, order models.Order) (models.Order, error) {
-	if id == 0{
+	if id == 0 {
 		return models.Order{}, errors.New("id is required")
 	}
 

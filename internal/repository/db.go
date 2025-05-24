@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
+	"log"
 	"time"
 
 )
@@ -26,7 +26,7 @@ func NewPostgresRepository(connStr string) (*PostgresRepository, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	slog.Info("Successfully connected to PostgreSQL database")
+	log.Printf("Successfully connected to PostgreSQL database")
 	return &PostgresRepository{db: db}, nil
 }
 

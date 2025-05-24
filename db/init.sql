@@ -17,7 +17,8 @@ DROP TABLE IF EXISTS inventory_transactions;
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     customer_name VARCHAR(255) NOT NULL,
-    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    total_amount DECIMAL(10) NOT NULL DEFAULT 0,
+    total_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
     status order_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

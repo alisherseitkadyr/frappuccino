@@ -36,14 +36,16 @@ func (r *orderRepository) Create(order models.Order) (models.Order, error) {
         INSERT INTO orders (customer_name, items, total_price)
         VALUES ($1, $2, $3)
         RETURNING order_id, created_at`
-	err = r.db.QueryRow(query, order.CustomerName, itemsJSON, order.TotalPrice).
+	err = r.db.QueryRow(query, order.Customer_name, itemsJSON, order.TotalPrice).
 		Scan(&order.ID, &order.CreatedAt)
+		
 	return order, err
 }
 
 func (r *orderRepository) GetAll() ([]models.Order, error) {
 	query := `SELECT order_id, customer_name, items, total_price, created_at FROM orders ORDER BY order_id DESC`
 	rows, err := r.db.Query(query)
+
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +56,7 @@ func (r *orderRepository) GetAll() ([]models.Order, error) {
 		var order models.Order
 		var itemsData []byte
 
-		if err := rows.Scan(&order.ID, &order.CustomerName, &itemsData, &order.TotalPrice, &order.CreatedAt); err != nil {
+		if err := rows.Scan(&order.ID, &order.Customer_name, &itemsData, &order.TotalPrice, &order.CreatedAt); err != nil {
 			return nil, err
 		}
 
@@ -73,7 +75,7 @@ func (r *orderRepository) GetByID(id int64) (models.Order, error) {
 
 	query := `SELECT order_id, customer_name, items, total_price, created_at FROM orders WHERE order_id = $1`
 	err := r.db.QueryRow(query, id).Scan(
-		&order.ID, &order.CustomerName, &itemsData, &order.TotalPrice, &order.CreatedAt,
+		&order.ID, &order.Customer_name, &itemsData, &order.TotalPrice, &order.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return models.Order{}, ErrNotFound
@@ -99,7 +101,7 @@ func (r *orderRepository) Update(id int64, updatedOrder models.Order) (models.Or
         UPDATE orders
         SET customer_name = $1, items = $2, total_price = $3
         WHERE order_id = $4`
-	result, err := r.db.Exec(query, updatedOrder.CustomerName, itemsJSON, updatedOrder.TotalPrice, id)
+	result, err := r.db.Exec(query, updatedOrder.Customer_name, itemsJSON, updatedOrder.TotalPrice, id)
 	if err != nil {
 		return models.Order{}, err
 	}
@@ -129,7 +131,7 @@ func (r *orderRepository) Delete(id int64) error {
 
 func (r *orderRepository) CreateTx(tx *sql.Tx, order models.Order) (models.Order, error) {
 	query := "INSERT INTO orders (customer_name, status, created_at) VALUES (?, ?, ?) RETURNING order_id"
-	err := tx.QueryRow(query, order.CustomerName, order.Status, order.CreatedAt).Scan(&order.ID)
+	err := tx.QueryRow(query, order.Customer_name, order.Status, order.CreatedAt).Scan(&order.ID)
 	if err != nil {
 		return models.Order{}, err
 	}

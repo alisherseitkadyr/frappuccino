@@ -18,13 +18,13 @@ type MenuItemIngredient struct {
 	Quantity     float64
 }
 
-type MenuItemRequest struct {
-	Name        string
-	Description string
-	Categories  []string
-	Price       float64
-	Ingredients []MenuItemIngredient
-}
+// type MenuItemRequest struct {
+// 	Name        string
+// 	Description string
+// 	Categories  []string
+// 	Price       float64
+// 	Ingredients []MenuItemIngredient
+// }
 
 func NewMenuItem(name, description string, price float64, ingredients []MenuItemIngredient) MenuItem {
 	return MenuItem{

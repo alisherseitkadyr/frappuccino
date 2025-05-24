@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"frappuccino/internal/service"
 	"frappuccino/models"
-	"log/slog"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,7 +27,7 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&itemReq); err != nil {
-		slog.Error("Failed to decode request body", "error", err)
+		log.Printf("Failed to decode request body", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -38,7 +38,7 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 		itemReq.Unit,
 	)
 	if err != nil {
-		slog.Error("Failed to create inventory item", "error", err)
+		log.Printf("Failed to create inventory item", "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -46,7 +46,7 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(createdItem); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -54,14 +54,14 @@ func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Re
 func (h *InventoryHandler) GetInventoryItems(w http.ResponseWriter, r *http.Request) {
 	items, err := h.service.GetInventoryItems()
 	if err != nil {
-		slog.Error("Failed to get inventory items", "error", err)
+		log.Printf("Failed to get inventory items", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(items); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -82,14 +82,14 @@ func (h *InventoryHandler) GetInventoryItem(w http.ResponseWriter, r *http.Reque
 
 	item, err := h.service.GetInventoryItem(id)
 	if err != nil {
-		slog.Error("Failed to get inventory item", "id", id, "error", err)
+		log.Printf("Failed to get inventory item", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(item); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -109,7 +109,7 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 
 	var item models.InventoryItem
 	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
-		slog.Error("Failed to decode request body", "error", err)
+		log.Printf("Failed to decode request body", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -122,14 +122,14 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 
 	updatedItem, err := h.service.UpdateInventoryItem(item)
 	if err != nil {
-		slog.Error("Failed to update inventory item", "id", id, "error", err)
+		log.Printf("Failed to update inventory item", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(updatedItem); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -150,7 +150,7 @@ func (h *InventoryHandler) DeleteInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.service.DeleteInventoryItem(id); err != nil {
-		slog.Error("Failed to delete inventory item", "id", id, "error", err)
+		log.Printf("Failed to delete inventory item", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

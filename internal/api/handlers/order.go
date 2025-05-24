@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"frappuccino/internal/service"
 	"frappuccino/models"
-	"log/slog"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,14 +21,14 @@ func NewOrderHandler(svc service.OrderService) *OrderHandler {
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var order models.Order
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		slog.Error("Failed to decode request body", "error", err)
+		log.Printf("Failed to decode request body", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	createdOrder, err := h.service.CreateOrder(order)
 	if err != nil {
-		slog.Error("Failed to create order", "error", err)
+		log.Printf("Failed to create order", "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -36,7 +36,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(createdOrder); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -44,14 +44,14 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.service.GetOrders()
 	if err != nil {
-		slog.Error("Failed to get orders", "error", err)
+		log.Printf("Failed to get orders", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(orders); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -73,14 +73,14 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 
 	order, err := h.service.GetOrder(id)
 	if err != nil {
-		slog.Error("Failed to get order", "id", id, "error", err)
+		log.Printf("Failed to get order", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(order); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -102,21 +102,21 @@ func (h *OrderHandler) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 
 	var order models.Order
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		slog.Error("Failed to decode request body", "error", err)
+		log.Printf("Failed to decode request body", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	updatedOrder, err := h.service.UpdateOrder(id, order)
 	if err != nil {
-		slog.Error("Failed to update order", "id", id, "error", err)
+		log.Printf("Failed to update order", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(updatedOrder); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -137,7 +137,7 @@ func (h *OrderHandler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.DeleteOrder(id); err != nil {
-		slog.Error("Failed to delete order", "id", id, "error", err)
+		log.Printf("Failed to delete order", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -162,14 +162,14 @@ func (h *OrderHandler) CloseOrder(w http.ResponseWriter, r *http.Request) {
 
 	order, err := h.service.CloseOrder(id)
 	if err != nil {
-		slog.Error("Failed to close order", "id", id, "error", err)
+		log.Printf("Failed to close order", "id", id, "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(order); err != nil {
-		slog.Error("Failed to encode response", "error", err)
+		log.Printf("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
