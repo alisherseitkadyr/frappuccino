@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type OrderHandler struct {
@@ -173,3 +174,33 @@ func (h *OrderHandler) CloseOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
+
+func (h *OrderHandler) GetNumberOfOrderedItems(w http.ResponseWriter, r *http.Request) {
+	startDate := r.URL.Query().Get("startDate")
+	endDate := r.URL.Query().Get("endDate")
+
+	// Проверка формата дат
+	if startDate != "" {
+		if _, err := time.Parse("2006-01-02", startDate); err != nil {
+			http.Error(w, "Invalid startDate format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+	}
+	if endDate != "" {
+		if _, err := time.Parse("2006-01-02", endDate); err != nil {
+			http.Error(w, "Invalid endDate format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+	}
+
+	data, err := h.service.GetNumberOfOrderedItems(startDate, endDate)
+	if err != nil {
+		http.Error(w, "Failed to fetch ordered items: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+

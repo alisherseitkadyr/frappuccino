@@ -9,8 +9,9 @@ import (
 	"frappuccino/internal/service"
 	"log"
 	"net/http"
-    _ "github.com/lib/pq"  // Postgres driver import for side effects only
 	"os"
+
+	_ "github.com/lib/pq" // Postgres driver import for side effects only
 )
 
 func main() {
@@ -42,12 +43,13 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	inventoryRepo := repository.NewInventoryRepository(db)
+	reportRepo := repository.NewReportRepository(db)
 
 	// Initialize services
 	orderSvc := service.NewOrderService(orderRepo, menuRepo, inventoryRepo, db)
 	menuSvc := service.NewMenuService(menuRepo)
 	inventorySvc := service.NewInventoryService(inventoryRepo)
-	reportsSvc := service.NewReportsService(orderRepo, menuRepo)
+	reportsSvc := service.NewReportsService(orderRepo, menuRepo, reportRepo)
 
 	// Initialize router
 	router := api.NewRouter(orderSvc, menuSvc, inventorySvc, reportsSvc)

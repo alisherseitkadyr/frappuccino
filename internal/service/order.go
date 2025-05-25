@@ -14,6 +14,7 @@ type OrderService interface {
 	CreateOrder(order models.Order) (models.Order, error)
 	GetOrders() ([]models.Order, error)
 	GetOrder(id int64) (models.Order, error)
+	GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error)
 	UpdateOrder(id int64, order models.Order) (models.Order, error)
 	DeleteOrder(id int64) error
 	CloseOrder(id int64) (models.Order, error)
@@ -200,4 +201,9 @@ func (s *orderService) CloseOrder(id int64) (models.Order, error) {
 
 	order.Status = "closed"
 	return s.orderRepo.Update(id, order)
+}
+
+
+func (s *orderService) GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error) {
+	return s.orderRepo.GetNumberOfOrderedItems(startDate, endDate)
 }

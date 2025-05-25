@@ -1,12 +1,19 @@
 package service
 
 import (
+	"fmt"
 	"frappuccino/internal/repository"
 	"frappuccino/models"
+	"log"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type ReportsService interface {
+	SearchReport(q, filter, min, max string) (models.SearchReportResponse, error)
+	GetOrderedItemsByPeriod(period, month, year string) (models.OrderedItemsByPeriodResponse, error)
 	GetTotalSales() (float64, error)
 	GetPopularItems(limit int) ([]models.MenuItem, error)
 }
@@ -14,15 +21,18 @@ type ReportsService interface {
 type reportsService struct {
 	orderRepo repository.OrderRepository
 	menuRepo  repository.MenuRepository
+	repo      repository.ReportRepository
 }
 
 func NewReportsService(
 	orderRepo repository.OrderRepository,
 	menuRepo repository.MenuRepository,
+	reportRepo repository.ReportRepository, // ✅ добавлено
 ) ReportsService {
 	return &reportsService{
 		orderRepo: orderRepo,
 		menuRepo:  menuRepo,
+		repo:      reportRepo, // ✅ инициализация
 	}
 }
 
@@ -110,4 +120,107 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 	}
 
 	return result, nil
+}
+
+func (s *reportsService) SearchReport(q, filter, min, max string) (models.SearchReportResponse, error) {
+	minPrice := 0.0
+	maxPrice := 999999.0
+	if s.repo == nil {
+		log.Fatal("s.repo is nil")
+	}
+	if min != "" {
+		if p, err := strconv.ParseFloat(min, 64); err == nil {
+			minPrice = p
+		}
+	}
+	if max != "" {
+		if p, err := strconv.ParseFloat(max, 64); err == nil {
+			maxPrice = p
+		}
+	}
+
+	filters := []string{"all"}
+	if filter != "" {
+		filters = strings.Split(filter, ",")
+	}
+
+	return s.repo.SearchReports(q, filters, minPrice, maxPrice)
+}
+
+func (s *reportsService) GetOrderedItemsByPeriod(period, month, year string) (models.OrderedItemsByPeriodResponse, error) {
+	resp := models.OrderedItemsByPeriodResponse{
+		Period: period,
+	}
+
+	if period == "day" {
+		if month == "" {
+			return resp, fmt.Errorf("month parameter required for period=day")
+		}
+		monthParsed, err := time.Parse("January", strings.Title(month))
+		if err != nil {
+			return resp, fmt.Errorf("invalid month: %s", month)
+		}
+
+		yearInt := time.Now().Year()
+		if year != "" {
+			if y, err := strconv.Atoi(year); err == nil {
+				yearInt = y
+			}
+		}
+
+		resp.Month = strings.ToLower(month)
+
+		data, err := s.repo.GetOrderedItemsByDay(yearInt, monthParsed.Month())
+		if err != nil {
+			return resp, err
+		}
+
+		// Формируем массив по дням месяца
+		var items []models.OrderedItemCount
+		daysInMonth := 31 // можно оптимизировать, но для простоты 31
+		for i := 1; i <= daysInMonth; i++ {
+			count := data[i]
+			items = append(items, models.OrderedItemCount{
+				Key:   fmt.Sprintf("%d", i),
+				Count: count,
+			})
+		}
+		resp.OrderedItems = items
+		return resp, nil
+	}
+
+	if period == "month" {
+		yearInt := time.Now().Year()
+		if year != "" {
+			if y, err := strconv.Atoi(year); err == nil {
+				yearInt = y
+			}
+		}
+
+		resp.Year = year
+
+		data, err := s.repo.GetOrderedItemsByMonth(yearInt)
+		if err != nil {
+			return resp, err
+		}
+
+		// Формируем массив месяцев в нужном порядке
+		monthsOrder := []string{
+			"january", "february", "march", "april", "may", "june",
+			"july", "august", "september", "october", "november", "december",
+		}
+
+		var items []models.OrderedItemCount
+		for _, m := range monthsOrder {
+			count := data[m]
+			items = append(items, models.OrderedItemCount{
+				Key:   m,
+				Count: count,
+			})
+		}
+		resp.OrderedItems = items
+		return resp, nil
+	}
+
+	return resp, fmt.Errorf("invalid period parameter: %s", period)
 }
