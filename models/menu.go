@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type MenuItem struct {
 	ID          int64
@@ -15,7 +17,8 @@ type MenuItem struct {
 
 type MenuItemIngredient struct {
 	IngredientID int64
-	Quantity     float64
+	ProductName  string
+	Quantity     int
 }
 
 // type MenuItemRequest struct {
@@ -26,11 +29,12 @@ type MenuItemIngredient struct {
 // 	Ingredients []MenuItemIngredient
 // }
 
-func NewMenuItem(name, description string, price float64, ingredients []MenuItemIngredient) MenuItem {
+func NewMenuItem(name, description string, categories []string, price float64, ingredients []MenuItemIngredient) MenuItem {
 	return MenuItem{
 		ID:          0,
 		Name:        name,
 		Description: description,
+		Categories:  categories,
 		Price:       price,
 		Ingredients: ingredients,
 	}

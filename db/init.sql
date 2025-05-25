@@ -17,7 +17,6 @@ DROP TABLE IF EXISTS inventory_transactions;
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     customer_name VARCHAR(255) NOT NULL,
-    total_amount DECIMAL(10) NOT NULL DEFAULT 0,
     total_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
     status order_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -28,7 +27,7 @@ CREATE TABLE orders (
 -- Menu Items Table
 CREATE TABLE menu_items (
     product_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
+    product_name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     categories TEXT[] NOT NULL,
     price DECIMAL(10, 2) NOT NULL CHECK(price >= 0),
@@ -60,8 +59,8 @@ CREATE TABLE order_items (
 --
 -- Menu Item Ingredients 
 CREATE TABLE menu_item_ingredients (
-    product_id INT NOT NULL REFERENCES menu_items(product_id) ON DELETE CASCADE,
     ingredient_id INT NOT NULL REFERENCES inventory(ingredient_id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES menu_items(product_id) ON DELETE CASCADE,
     quantity INT NOT NULL CHECK(quantity >= 0),
     PRIMARY KEY (product_id, ingredient_id)
 );
@@ -129,7 +128,7 @@ INSERT INTO inventory (name, quantity, unit) VALUES
 ('Cold Brew Concentrate', 2000, 'ml');
 
 -- Insert menu items
-INSERT INTO menu_items (name, description, categories, price) VALUES
+INSERT INTO menu_items (product_name, description, categories, price) VALUES
 ('Latte', 'Espresso with steamed milk', ARRAY['coffee', 'hot'], 4.50),
 ('Cappuccino', 'Espresso with steamed milk and foam', ARRAY['coffee', 'hot'], 4.20),
 ('Americano', 'Espresso with hot water', ARRAY['coffee', 'hot'], 3.00),
@@ -165,7 +164,7 @@ INSERT INTO menu_item_ingredients (product_id, ingredient_id, quantity) VALUES
 (10, 20, 240);
 
 -- Insert 30 orders
-INSERT INTO orders (customer_name, total_amount, status, created_at) VALUES
+INSERT INTO orders (customer_name, total_price, status, created_at) VALUES
 ('Alice', 4.50, 'pending', '2024-12-01'),
 ('Bob', 3.00, 'closed', '2024-12-02'),
 ('Charlie', 5.00, 'processing', '2024-12-03'),

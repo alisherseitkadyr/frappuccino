@@ -11,7 +11,7 @@ var ErrNotFound = errors.New("not found")
 
 type OrderRepository interface {
 	Create(order models.Order) (models.Order, error)
-	CreateTx(tx *sql.Tx, order models.Order) (models.Order, error) // 👈 добавь этот метод
+	CreateTx(tx *sql.Tx, order models.Order) (models.Order, error)
 	GetAll() ([]models.Order, error)
 	GetByID(id int64) (models.Order, error)
 	Update(id int64, order models.Order) (models.Order, error)
@@ -27,25 +27,51 @@ func NewOrderRepository(db *sql.DB) OrderRepository {
 }
 
 func (r *orderRepository) Create(order models.Order) (models.Order, error) {
-	itemsJSON, err := json.Marshal(order.Items)
+	tx, err := r.db.Begin()
 	if err != nil {
 		return models.Order{}, err
 	}
 
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Вставляем основной заказ
 	query := `
-        INSERT INTO orders (customer_name, items, total_price)
-        VALUES ($1, $2, $3)
-        RETURNING order_id, created_at`
-	err = r.db.QueryRow(query, order.Customer_name, itemsJSON, order.TotalPrice).
+		INSERT INTO orders (customer_name, total_price)
+		VALUES ($1, $2)
+		RETURNING order_id, created_at`
+	err = tx.QueryRow(query, order.CustomerName, order.TotalPrice).
 		Scan(&order.ID, &order.CreatedAt)
-		
-	return order, err
+	if err != nil {
+		return models.Order{}, err
+	}
+
+	// Вставляем товары заказа
+	for _, item := range order.Items {
+		_, err := tx.Exec(`
+			INSERT INTO order_items (order_id, product_id, quantity)
+			VALUES ($1, $2, $3)
+		`, order.ID, item.ProductID, item.Quantity)
+		if err != nil {
+			return models.Order{}, err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return models.Order{}, err
+	}
+
+	return order, nil
 }
 
-func (r *orderRepository) GetAll() ([]models.Order, error) {
-	query := `SELECT order_id, customer_name, items, total_price, created_at FROM orders ORDER BY order_id DESC`
-	rows, err := r.db.Query(query)
 
+func (r *orderRepository) GetAll() ([]models.Order, error) {
+	query := `SELECT order_id, customer_name, total_price, created_at FROM orders ORDER BY order_id DESC`
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +80,12 @@ func (r *orderRepository) GetAll() ([]models.Order, error) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		var itemsData []byte
-
-		if err := rows.Scan(&order.ID, &order.Customer_name, &itemsData, &order.TotalPrice, &order.CreatedAt); err != nil {
+		if err := rows.Scan(&order.ID, &order.CustomerName, &order.TotalPrice, &order.CreatedAt); err != nil {
 			return nil, err
 		}
 
-		if err := json.Unmarshal(itemsData, &order.Items); err != nil {
+		order.Items, err = r.getOrderItems(order.ID)
+		if err != nil {
 			return nil, err
 		}
 
@@ -69,13 +94,13 @@ func (r *orderRepository) GetAll() ([]models.Order, error) {
 	return orders, nil
 }
 
+
 func (r *orderRepository) GetByID(id int64) (models.Order, error) {
 	var order models.Order
-	var itemsData []byte
 
-	query := `SELECT order_id, customer_name, items, total_price, created_at FROM orders WHERE order_id = $1`
+	query := `SELECT order_id, customer_name, total_price, created_at FROM orders WHERE order_id = $1`
 	err := r.db.QueryRow(query, id).Scan(
-		&order.ID, &order.Customer_name, &itemsData, &order.TotalPrice, &order.CreatedAt,
+		&order.ID, &order.CustomerName, &order.TotalPrice, &order.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return models.Order{}, ErrNotFound
@@ -84,12 +109,14 @@ func (r *orderRepository) GetByID(id int64) (models.Order, error) {
 		return models.Order{}, err
 	}
 
-	if err := json.Unmarshal(itemsData, &order.Items); err != nil {
+	order.Items, err = r.getOrderItems(order.ID)
+	if err != nil {
 		return models.Order{}, err
 	}
 
 	return order, nil
 }
+
 
 func (r *orderRepository) Update(id int64, updatedOrder models.Order) (models.Order, error) {
 	itemsJSON, err := json.Marshal(updatedOrder.Items)
@@ -101,7 +128,7 @@ func (r *orderRepository) Update(id int64, updatedOrder models.Order) (models.Or
         UPDATE orders
         SET customer_name = $1, items = $2, total_price = $3
         WHERE order_id = $4`
-	result, err := r.db.Exec(query, updatedOrder.Customer_name, itemsJSON, updatedOrder.TotalPrice, id)
+	result, err := r.db.Exec(query, updatedOrder.CustomerName, itemsJSON, updatedOrder.TotalPrice, id)
 	if err != nil {
 		return models.Order{}, err
 	}
@@ -130,18 +157,106 @@ func (r *orderRepository) Delete(id int64) error {
 }
 
 func (r *orderRepository) CreateTx(tx *sql.Tx, order models.Order) (models.Order, error) {
-	query := "INSERT INTO orders (customer_name, status, created_at) VALUES (?, ?, ?) RETURNING order_id"
-	err := tx.QueryRow(query, order.Customer_name, order.Status, order.CreatedAt).Scan(&order.ID)
+	// 1. Вставка заказа
+	query := `INSERT INTO orders (customer_name, status, created_at) VALUES ($1, $2, $3) RETURNING order_id`
+	err := tx.QueryRow(query, order.CustomerName, order.Status, order.CreatedAt).Scan(&order.ID)
 	if err != nil {
 		return models.Order{}, err
 	}
 
+	// 2. Подсчёт необходимых ингредиентов
+	ingredientNeeds := make(map[int64]int) // ingredient_id -> total needed
 	for _, item := range order.Items {
-		itemQuery := "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)"
-		_, err := tx.Exec(itemQuery, order.ID, item.ProductID, item.Quantity)
+		ingredients, err := r.GetIngredientsByProductID(item.ProductID)
+		if err != nil {
+			return models.Order{}, err
+		}
+		for _, ing := range ingredients {
+			ingredientNeeds[ing.IngredientID] += ing.Quantity * item.Quantity
+		}
+
+		// вставка в order_items
+		itemQuery := `INSERT INTO order_items (order_id, product_id, quantity) VALUES ($1, $2, $3)`
+		_, err = tx.Exec(itemQuery, order.ID, item.ProductID, item.Quantity)
 		if err != nil {
 			return models.Order{}, err
 		}
 	}
+
+	// 3. Проверка и обновление inventory
+	for ingID, totalQty := range ingredientNeeds {
+		err := r.UpdateInventory(tx, ingID, totalQty)
+		if err != nil {
+			return models.Order{}, err
+		}
+	}
+
 	return order, nil
+}
+
+
+
+
+func (r *orderRepository) GetIngredientsByProductID(productID int64) ([]models.MenuItemIngredient, error) {
+	query := `
+	SELECT mi.ingredient_id, inv.name, mi.quantity
+	FROM menu_item_ingredients mi
+	JOIN inventory inv ON inv.ingredient_id = mi.ingredient_id
+	WHERE mi.product_id = $1`
+
+	rows, err := r.db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ingredients []models.MenuItemIngredient
+	for rows.Next() {
+		var ing models.MenuItemIngredient
+		if err := rows.Scan(&ing.IngredientID, &ing.ProductName, &ing.Quantity); err != nil {
+			return nil, err
+		}
+		ingredients = append(ingredients, ing)
+	}
+	return ingredients, nil
+}
+
+
+
+func (r *orderRepository) UpdateInventory(tx *sql.Tx, ingredientID int64, quantity int) error {
+	query := `UPDATE inventory SET quantity = quantity - $1 WHERE ingredient_id = $2 AND quantity >= $1`
+	result, err := tx.Exec(query, quantity, ingredientID)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return errors.New("not enough inventory")
+	}
+	return nil
+}
+
+
+func (r *orderRepository) getOrderItems(orderID int64) ([]models.OrderItem, error) {
+	query := `
+		SELECT oi.product_id, p.product_name, oi.quantity
+		FROM order_items oi
+		JOIN menu_items p ON oi.product_id = p.product_id
+		WHERE oi.order_id = $1`
+	rows, err := r.db.Query(query, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.OrderItem
+	for rows.Next() {
+		var item models.OrderItem
+		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.Quantity); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }

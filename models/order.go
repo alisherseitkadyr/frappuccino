@@ -15,7 +15,7 @@ const (
 
 type Order struct {
 	ID           int64     // ID будет заполнен после вставки в БД
-	Customer_name string
+	CustomerName string
 	Items        []OrderItem
 	TotalPrice   float64
 	Status       OrderStatus
@@ -25,6 +25,7 @@ type Order struct {
 
 type OrderItem struct {
 	ProductID int64
+	ProductName string
 	Quantity  int
 }
 
@@ -42,7 +43,7 @@ type OrderItem struct {
 // func NewOrder(customerName string, items []OrderItem) Order {
 // 	return Order{
 // 		ID:           0, // ID присвоит база
-// 		customer_name: 0,
+// 		CustomerName: 
 // 		Items:        items,
 // 		Status:       StatusPending,
 // 		CreatedAt:    time.Now(),

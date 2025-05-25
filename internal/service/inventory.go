@@ -7,7 +7,7 @@ import (
 )
 
 type InventoryService interface {
-	CreateInventoryItem(name string, quantity float64, unit string) (models.InventoryItem, error)
+	CreateInventoryItem(name string, quantity int, unit string) (models.InventoryItem, error)
 	GetInventoryItems() ([]models.InventoryItem, error)
 	GetInventoryItem(id int64) (models.InventoryItem, error)
 	UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
@@ -22,7 +22,7 @@ func NewInventoryService(repo repository.InventoryRepository) InventoryService {
 	return &inventoryService{repo: repo}
 }
 
-func (s *inventoryService) CreateInventoryItem(name string, quantity float64, unit string) (models.InventoryItem, error) {
+func (s *inventoryService) CreateInventoryItem(name string, quantity int, unit string) (models.InventoryItem, error) {
 	if name == "" {
 		return models.InventoryItem{}, errors.New("name is required")
 	}

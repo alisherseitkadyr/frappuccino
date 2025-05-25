@@ -22,7 +22,7 @@ func NewInventoryHandler(svc service.InventoryService) *InventoryHandler {
 func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Request) {
 	var itemReq struct {
 		Name     string  `json:"name"`
-		Quantity float64 `json:"quantity"`
+		Quantity int `json:"quantity"`
 		Unit     string  `json:"unit"`
 	}
 

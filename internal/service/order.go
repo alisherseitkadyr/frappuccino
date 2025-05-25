@@ -42,7 +42,7 @@ func NewOrderService(
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 	// Валидация входных данных
-	if order.Customer_name == "" {
+	if order.CustomerName == "" {
 		return models.Order{}, errors.New("customer_name is required")
 	}
 	if len(order.Items) == 0 {
@@ -75,7 +75,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 				log.Printf("Inventory item not found", "ingredient_id", ingredient.IngredientID, "error", err)
 				return models.Order{}, fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID)
 			}
-			needed := ingredient.Quantity * float64(item.Quantity)
+			needed := ingredient.Quantity * (item.Quantity)
 			if invItem.Quantity < needed {
 				return models.Order{}, fmt.Errorf(
 					"not enough %s. Need %.2f%s, have %.2f%s",
@@ -117,7 +117,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			if err != nil {
 				return rollback(fmt.Errorf("ingredient '%s' not available", ingredient.IngredientID))
 			}
-			needed := ingredient.Quantity * float64(item.Quantity)
+			needed := ingredient.Quantity * item.Quantity
 			invItem.Quantity -= needed
 			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem) // Метод обновления с транзакцией
 			if err != nil {
