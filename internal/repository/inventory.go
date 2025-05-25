@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"frappuccino/models"
 )
 
@@ -12,6 +13,8 @@ type InventoryRepository interface {
 	Update(item models.InventoryItem) (models.InventoryItem, error)
 	UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) // 👈 добавь этот метод
 	Delete(id int64) error
+
+	GetLeftOvers(sortBy string, offset, limit int) ([]models.InventoryItem, int, error)
 }
 
 type inventoryRepository struct {
@@ -90,4 +93,41 @@ func (r *inventoryRepository) UpdateTx(tx *sql.Tx, item models.InventoryItem) (m
 		return models.InventoryItem{}, err
 	}
 	return item, nil
+}
+
+func (r *inventoryRepository) GetLeftOvers(sortBy string, offset, limit int) ([]models.InventoryItem, int, error) {
+	validSortFields := map[string]string{
+		"price":    "price",
+		"quantity": "quantity",
+	}
+
+	sortField, ok := validSortFields[sortBy]
+	if !ok {
+		sortField = "ingredient_id" // default sort
+	}
+
+	query := fmt.Sprintf(`SELECT ingredient_id, name, quantity, unit FROM inventory ORDER BY %s DESC LIMIT ? OFFSET ?`, sortField)
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var items []models.InventoryItem
+	for rows.Next() {
+		var item models.InventoryItem
+		if err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+
+	// Подсчёт общего количества для пагинации
+	var total int
+	err = r.db.QueryRow(`SELECT COUNT(*) FROM inventory`).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
 }

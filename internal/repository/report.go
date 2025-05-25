@@ -107,11 +107,15 @@ func contains(slice []string, value string) bool {
 
 func (r *reportRepository) GetOrderedItemsByDay(year int, month time.Month) (map[int]int, error) {
 	query := `
-		SELECT EXTRACT(DAY FROM order_date) as day, COUNT(*) as count
-		FROM orders
-		WHERE EXTRACT(YEAR FROM order_date) = $1 AND EXTRACT(MONTH FROM order_date) = $2
-		GROUP BY day
-		ORDER BY day`
+		SELECT EXTRACT(DAY FROM day) AS day, COUNT(*) AS count
+FROM (
+  SELECT DATE(created_at) AS day
+  FROM orders
+  WHERE created_at >= DATE_TRUNC('month', MAKE_DATE($1, $2, 1))
+    AND created_at <  DATE_TRUNC('month', MAKE_DATE($1, $2, 1)) + INTERVAL '1 month'
+) sub
+GROUP BY day
+ORDER BY day;`
 	rows, err := r.db.Query(query, year, int(month))
 	if err != nil {
 		return nil, err
@@ -132,11 +136,11 @@ func (r *reportRepository) GetOrderedItemsByDay(year int, month time.Month) (map
 
 func (r *reportRepository) GetOrderedItemsByMonth(year int) (map[string]int, error) {
 	query := `
-		SELECT TO_CHAR(order_date, 'Month') as month, COUNT(*) as count
+		SELECT TO_CHAR(created_at, 'Month') as month, COUNT(*) as count
 		FROM orders
-		WHERE EXTRACT(YEAR FROM order_date) = $1
+		WHERE EXTRACT(YEAR FROM created_at) = $1
 		GROUP BY month
-		ORDER BY MIN(order_date)`
+		ORDER BY MIN(created_at)`
 	rows, err := r.db.Query(query, year)
 	if err != nil {
 		return nil, err

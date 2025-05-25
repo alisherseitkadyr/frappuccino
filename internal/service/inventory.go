@@ -12,6 +12,9 @@ type InventoryService interface {
 	GetInventoryItem(id int64) (models.InventoryItem, error)
 	UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
 	DeleteInventoryItem(id int64) error
+
+	GetLeftOvers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error)
+
 }
 
 type inventoryService struct {
@@ -76,3 +79,18 @@ func (s *inventoryService) UpdateInventoryItem(item models.InventoryItem) (model
 }
 
 
+func (s *inventoryService) GetLeftOvers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
+	items, totalCount, err := s.repo.GetLeftOvers(sortBy, offset, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, totalCount, nil
+}

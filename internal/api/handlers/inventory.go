@@ -5,10 +5,10 @@ import (
 	"frappuccino/internal/service"
 	"frappuccino/models"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
-
 )
 
 type InventoryHandler struct {
@@ -21,9 +21,9 @@ func NewInventoryHandler(svc service.InventoryService) *InventoryHandler {
 
 func (h *InventoryHandler) CreateInventoryItem(w http.ResponseWriter, r *http.Request) {
 	var itemReq struct {
-		Name     string  `json:"name"`
-		Quantity int `json:"quantity"`
-		Unit     string  `json:"unit"`
+		Name     string `json:"name"`
+		Quantity int    `json:"quantity"`
+		Unit     string `json:"unit"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&itemReq); err != nil {
@@ -138,7 +138,6 @@ func (h *InventoryHandler) DeleteInventoryItem(w http.ResponseWriter, r *http.Re
 	n := strings.TrimPrefix(r.URL.Path, "/inventory/{")
 	n = strings.TrimSuffix(n, "}")
 	id, err := strconv.ParseInt(n, 10, 64)
-
 	if err != nil {
 		http.Error(w, "Inventory item ID is required", http.StatusBadRequest)
 		return
@@ -156,4 +155,52 @@ func (h *InventoryHandler) DeleteInventoryItem(w http.ResponseWriter, r *http.Re
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *InventoryHandler) GetLeftOversHandler(w http.ResponseWriter, r *http.Request) {
+	sortBy := r.URL.Query().Get("sortBy")
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("pageSize")
+
+	page, _ := strconv.Atoi(pageStr)
+	pageSize, _ := strconv.Atoi(pageSizeStr)
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	items, total, err := h.service.GetLeftOvers(sortBy, page, pageSize)
+	if err != nil {
+		http.Error(w, "Error fetching leftovers", http.StatusInternalServerError)
+		return
+	}
+
+	type ResponseItem struct {
+		Name     string  `json:"name"`
+		Quantity int `json:"quantity"`
+		// Price    float64 `json:"price"`
+	}
+	var responseData []ResponseItem
+	for _, item := range items {
+		responseData = append(responseData, ResponseItem{
+			Name:     item.Name,
+			Quantity: item.Quantity,
+		})
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+	hasNext := page < totalPages
+
+	resp := map[string]interface{}{
+		"currentPage": page,
+		"hasNextPage": hasNext,
+		"pageSize":    pageSize,
+		"totalPages":  totalPages,
+		"data":        responseData,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

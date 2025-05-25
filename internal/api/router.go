@@ -50,7 +50,7 @@ func NewRouter(
 	mux.HandleFunc("GET /orders/numberOfOrderedItems", orderHandler.GetNumberOfOrderedItems)
 	mux.HandleFunc("GET /reports/search", reportsHandler.SearchReportHandler)
 	mux.HandleFunc("GET /reports/orderedItemsByPeriod", reportsHandler.OrderedItemsByPeriodHandler)
-
+	mux.HandleFunc("GET /inventory/getLeftOvers", inventoryHandler.GetLeftOversHandler)
 
 
 	return mux
