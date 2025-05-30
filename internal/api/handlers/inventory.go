@@ -114,7 +114,6 @@ func (h *InventoryHandler) UpdateInventoryItem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Ensure the ID in the path matches the ID in the body
 	if item.IngredientID != id {
 		http.Error(w, "ID in path doesn't match ID in body", http.StatusBadRequest)
 		return
@@ -180,7 +179,6 @@ func (h *InventoryHandler) GetLeftOversHandler(w http.ResponseWriter, r *http.Re
 	type ResponseItem struct {
 		Name     string  `json:"name"`
 		Quantity int `json:"quantity"`
-		// Price    float64 `json:"price"`
 	}
 	var responseData []ResponseItem
 	for _, item := range items {

@@ -24,7 +24,7 @@ type orderService struct {
 	orderRepo     repository.OrderRepository
 	menuRepo      repository.MenuRepository
 	inventoryRepo repository.InventoryRepository
-	db            *sql.DB // Для транзакций
+	db            *sql.DB
 }
 
 func NewOrderService(
@@ -42,7 +42,6 @@ func NewOrderService(
 }
 
 func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
-	// Валидация входных данных
 	if order.CustomerName == "" {
 		return models.Order{}, errors.New("customer_name is required")
 	}
@@ -50,7 +49,6 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 		return models.Order{}, errors.New("order must contain at least one item")
 	}
 
-	// Получим меню для всех позиций заказа один раз, кэшируя в map
 	menuCache := make(map[int64]models.MenuItem)
 
 	for _, item := range order.Items {
@@ -69,7 +67,6 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			menuCache[item.ProductID] = menuItem
 		}
 
-		// Проверяем ингредиенты и их наличие в инвентаре
 		for _, ingredient := range menuItem.Ingredients {
 			invItem, err := s.inventoryRepo.GetByID(ingredient.IngredientID)
 			if err != nil {
@@ -90,19 +87,14 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 		}
 	}
 
-	// Генерируем ID заказа и выставляем статус, дату создания
-	// order.ID = generateOrderID()
 	order.Status = "open"
-	// order.CreatedAt = time.Now().Format(time.RFC3339)
 
-	// Используем транзакцию для списания инвентаря и создания заказа
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		log.Printf("Failed to begin transaction", "error", err)
 		return models.Order{}, errors.New("failed to start transaction")
 	}
 
-	// Функция отката транзакции в случае ошибки
 	rollback := func(err error) (models.Order, error) {
 		if rbErr := tx.Rollback(); rbErr != nil {
 			log.Printf("Failed to rollback transaction", "error", rbErr)
@@ -110,7 +102,6 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 		return models.Order{}, err
 	}
 
-	// Списываем ингредиенты
 	for _, item := range order.Items {
 		menuItem := menuCache[item.ProductID]
 		for _, ingredient := range menuItem.Ingredients {
@@ -120,23 +111,21 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			}
 			needed := ingredient.Quantity * item.Quantity
 			invItem.Quantity -= needed
-			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem) // Метод обновления с транзакцией
+			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem)
 			if err != nil {
 				log.Printf("Failed to update inventory", "error", err)
 				return rollback(fmt.Errorf("failed to update inventory: %v", err))
 			}
-			_ = updatedInv // Не используем, но можем логировать если нужно
+			_ = updatedInv
 		}
 	}
 
-	// Создаём заказ в рамках транзакции
 	createdOrder, err := s.orderRepo.CreateTx(tx, order)
 	if err != nil {
 		log.Printf("Failed to save order", "error", err)
 		return rollback(errors.New("failed to save order"))
 	}
 
-	// Коммит транзакции
 	if err := tx.Commit(); err != nil {
 		log.Printf("Failed to commit transaction", "error", err)
 		return models.Order{}, errors.New("failed to commit transaction")
@@ -144,10 +133,6 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 
 	return createdOrder, nil
 }
-
-// func generateOrderID() int64 {
-// 	return fmt.Sprintf("order_%d", time.Now().UnixNano())
-// }
 
 func (s *orderService) GetOrders() ([]models.Order, error) {
 	return s.orderRepo.GetAll()
@@ -170,7 +155,6 @@ func (s *orderService) UpdateOrder(id int64, order models.Order) (models.Order, 
 		return models.Order{}, err
 	}
 
-	// Сохраняем ID, CreatedAt и Status без изменений
 	order.ID = existingOrder.ID
 	order.CreatedAt = existingOrder.CreatedAt
 	order.Status = existingOrder.Status
@@ -202,7 +186,6 @@ func (s *orderService) CloseOrder(id int64) (models.Order, error) {
 	order.Status = "closed"
 	return s.orderRepo.Update(id, order)
 }
-
 
 func (s *orderService) GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error) {
 	return s.orderRepo.GetNumberOfOrderedItems(startDate, endDate)

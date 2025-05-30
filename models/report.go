@@ -24,8 +24,8 @@ type SearchReportResponse struct {
 
 
 type OrderedItemCount struct {
-	Key   string `json:"key"`   // день или месяц
-	Count int    `json:"count"` // количество заказов
+	Key   string `json:"key"` 
+	Count int    `json:"count"` 
 }
 
 type OrderedItemsByPeriodResponse struct {

@@ -29,7 +29,6 @@ func (s *menuService) CreateMenuItem(item models.MenuItem) (models.MenuItem, err
 	if item.Price <= 0 {
 		return models.MenuItem{}, errors.New("price must be positive")
 	}
-	// item.ID = generateOrderID()
 	return s.repo.Create(item)
 }
 

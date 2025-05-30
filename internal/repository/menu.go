@@ -7,7 +7,6 @@ import (
 	"github.com/lib/pq"
 )
 
-// ErrNotFound    = errors.New("not found")
 var ErrDuplicateID = errors.New("duplicate ID")
 
 type MenuRepository interface {

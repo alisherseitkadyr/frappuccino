@@ -27,16 +27,15 @@ type reportsService struct {
 func NewReportsService(
 	orderRepo repository.OrderRepository,
 	menuRepo repository.MenuRepository,
-	reportRepo repository.ReportRepository, // ✅ добавлено
+	reportRepo repository.ReportRepository, 
 ) ReportsService {
 	return &reportsService{
 		orderRepo: orderRepo,
 		menuRepo:  menuRepo,
-		repo:      reportRepo, // ✅ инициализация
+		repo:      reportRepo,
 	}
 }
 
-// GetTotalSales подсчитывает сумму выручки по всем закрытым заказам
 func (s *reportsService) GetTotalSales() (float64, error) {
 	orders, err := s.orderRepo.GetAll()
 	if err != nil {
@@ -48,7 +47,6 @@ func (s *reportsService) GetTotalSales() (float64, error) {
 		return 0, err
 	}
 
-	// Создаем мапу для быстрого поиска цены по ID товара
 	menuItemMap := make(map[int64]models.MenuItem, len(menuItems))
 	for _, item := range menuItems {
 		menuItemMap[item.ID] = item
@@ -68,7 +66,6 @@ func (s *reportsService) GetTotalSales() (float64, error) {
 	return totalSales, nil
 }
 
-// GetPopularItems возвращает топ-N популярных товаров по количеству заказов
 func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 	orders, err := s.orderRepo.GetAll()
 	if err != nil {
@@ -80,7 +77,6 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 		return nil, err
 	}
 
-	// Подсчитываем количество заказов каждого товара
 	popularity := make(map[int64]int)
 	for _, order := range orders {
 		if order.Status == "closed" {
@@ -90,7 +86,6 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 		}
 	}
 
-	// Создаем срез с данными о популярности для сортировки
 	type popularItem struct {
 		MenuItem   models.MenuItem
 		OrderCount int
@@ -105,12 +100,10 @@ func (s *reportsService) GetPopularItems(limit int) ([]models.MenuItem, error) {
 		})
 	}
 
-	// Сортируем по убыванию популярности
 	sort.Slice(popularItems, func(i, j int) bool {
 		return popularItems[i].OrderCount > popularItems[j].OrderCount
 	})
 
-	// Формируем результат с ограничением по limit
 	if limit > len(popularItems) {
 		limit = len(popularItems)
 	}

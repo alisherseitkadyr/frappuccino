@@ -21,14 +21,6 @@ type MenuItemIngredient struct {
 	Quantity     int
 }
 
-// type MenuItemRequest struct {
-// 	Name        string
-// 	Description string
-// 	Categories  []string
-// 	Price       float64
-// 	Ingredients []MenuItemIngredient
-// }
-
 func NewMenuItem(name, description string, categories []string, price float64, ingredients []MenuItemIngredient) MenuItem {
 	return MenuItem{
 		ID:          0,

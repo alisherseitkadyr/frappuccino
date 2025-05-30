@@ -14,7 +14,7 @@ const (
 )
 
 type Order struct {
-	ID           int64     // ID будет заполнен после вставки в БД
+	ID           int64
 	CustomerName string
 	Items        []OrderItem
 	TotalPrice   float64
@@ -28,24 +28,3 @@ type OrderItem struct {
 	ProductName string
 	Quantity  int
 }
-
-// type OrderRequest struct {
-// 	CustomerName string           
-// 	Items        []OrderItemRequest 
-// }
-
-// type OrderItemRequest struct {
-// 	ProductID int64 
-// 	Quantity  int   
-// }
-
-// NewOrder создаёт объект заказа с начальным статусом "pending" и текущим временем.
-// func NewOrder(customerName string, items []OrderItem) Order {
-// 	return Order{
-// 		ID:           0, // ID присвоит база
-// 		CustomerName: 
-// 		Items:        items,
-// 		Status:       StatusPending,
-// 		CreatedAt:    time.Now(),
-// 	}
-// }
