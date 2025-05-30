@@ -13,7 +13,6 @@ type InventoryRepository interface {
 	Update(item models.InventoryItem) (models.InventoryItem, error)
 	UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) // 👈 добавь этот метод
 	Delete(id int64) error
-
 	GetLeftOvers(sortBy string, offset, limit int) ([]models.InventoryItem, int, error)
 }
 

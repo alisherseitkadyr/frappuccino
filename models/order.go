@@ -20,11 +20,11 @@ type Order struct {
 	TotalPrice   float64
 	Status       OrderStatus
 	CreatedAt    time.Time
-	UpdatedAt	 time.Time
+	UpdatedAt    time.Time
 }
 
 type OrderItem struct {
-	ProductID int64
+	ProductID   int64
 	ProductName string
-	Quantity  int
+	Quantity    int
 }

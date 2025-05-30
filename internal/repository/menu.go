@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"frappuccino/models"
+
 	"github.com/lib/pq"
 )
 
@@ -57,8 +58,6 @@ func (r *menuRepository) Create(item models.MenuItem) (models.MenuItem, error) {
 	return item, nil
 }
 
-
-
 func (r *menuRepository) GetAll() ([]models.MenuItem, error) {
 	query := `SELECT product_id, product_name, description, categories, price FROM menu_items`
 	rows, err := r.db.Query(query)
@@ -102,7 +101,6 @@ func (r *menuRepository) GetAll() ([]models.MenuItem, error) {
 	return items, nil
 }
 
-
 func (r *menuRepository) GetByID(id int64) (models.MenuItem, error) {
 	query := `SELECT product_id, product_name, description, categories, price FROM menu_items WHERE product_id = $1`
 	var item models.MenuItem
@@ -135,8 +133,6 @@ func (r *menuRepository) GetByID(id int64) (models.MenuItem, error) {
 
 	return item, nil
 }
-
-
 
 func (r *menuRepository) Update(id int64, item models.MenuItem) (models.MenuItem, error) {
 	tx, err := r.db.Begin()
@@ -179,7 +175,6 @@ func (r *menuRepository) Update(id int64, item models.MenuItem) (models.MenuItem
 	return item, nil
 }
 
-
 func (r *menuRepository) Delete(id int64) error {
 	query := `DELETE FROM menu_items WHERE product_id = $1`
 	result, err := r.db.Exec(query, id)
@@ -192,4 +187,3 @@ func (r *menuRepository) Delete(id int64) error {
 	}
 	return nil
 }
-

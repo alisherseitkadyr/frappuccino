@@ -12,7 +12,6 @@ var ErrNotFound = errors.New("not found")
 type OrderRepository interface {
 	Create(order models.Order) (models.Order, error)
 	GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error)
-
 	CreateTx(tx *sql.Tx, order models.Order) (models.Order, error)
 	GetAll() ([]models.Order, error)
 	GetByID(id int64) (models.Order, error)
@@ -70,7 +69,6 @@ func (r *orderRepository) Create(order models.Order) (models.Order, error) {
 	return order, nil
 }
 
-
 func (r *orderRepository) GetAll() ([]models.Order, error) {
 	query := `SELECT order_id, customer_name, total_price, created_at FROM orders ORDER BY order_id DESC`
 	rows, err := r.db.Query(query)
@@ -96,7 +94,6 @@ func (r *orderRepository) GetAll() ([]models.Order, error) {
 	return orders, nil
 }
 
-
 func (r *orderRepository) GetByID(id int64) (models.Order, error) {
 	var order models.Order
 
@@ -118,7 +115,6 @@ func (r *orderRepository) GetByID(id int64) (models.Order, error) {
 
 	return order, nil
 }
-
 
 func (r *orderRepository) Update(id int64, updatedOrder models.Order) (models.Order, error) {
 	itemsJSON, err := json.Marshal(updatedOrder.Items)
@@ -196,9 +192,6 @@ func (r *orderRepository) CreateTx(tx *sql.Tx, order models.Order) (models.Order
 	return order, nil
 }
 
-
-
-
 func (r *orderRepository) GetIngredientsByProductID(productID int64) ([]models.MenuItemIngredient, error) {
 	query := `
 	SELECT mi.ingredient_id, inv.name, mi.quantity
@@ -223,8 +216,6 @@ func (r *orderRepository) GetIngredientsByProductID(productID int64) ([]models.M
 	return ingredients, nil
 }
 
-
-
 func (r *orderRepository) UpdateInventory(tx *sql.Tx, ingredientID int64, quantity int) error {
 	query := `UPDATE inventory SET quantity = quantity - $1 WHERE ingredient_id = $2 AND quantity >= $1`
 	result, err := tx.Exec(query, quantity, ingredientID)
@@ -237,7 +228,6 @@ func (r *orderRepository) UpdateInventory(tx *sql.Tx, ingredientID int64, quanti
 	}
 	return nil
 }
-
 
 func (r *orderRepository) getOrderItems(orderID int64) ([]models.OrderItem, error) {
 	query := `

@@ -61,7 +61,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			var err error
 			menuItem, err = s.menuRepo.GetByID(item.ProductID)
 			if err != nil {
-				log.Printf("Invalid product ID", "product_id", item.ProductID, "error", err)
+				log.Print("Invalid product ID", "product_id", item.ProductID, "error", err)
 				return models.Order{}, fmt.Errorf("product ID '%s' not found in menu", item.ProductID)
 			}
 			menuCache[item.ProductID] = menuItem
@@ -91,13 +91,13 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
-		log.Printf("Failed to begin transaction", "error", err)
+		log.Print("Failed to begin transaction", "error", err)
 		return models.Order{}, errors.New("failed to start transaction")
 	}
 
 	rollback := func(err error) (models.Order, error) {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			log.Printf("Failed to rollback transaction", "error", rbErr)
+			log.Print("Failed to rollback transaction", "error", rbErr)
 		}
 		return models.Order{}, err
 	}
@@ -113,7 +113,7 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 			invItem.Quantity -= needed
 			updatedInv, err := s.inventoryRepo.UpdateTx(tx, invItem)
 			if err != nil {
-				log.Printf("Failed to update inventory", "error", err)
+				log.Print("Failed to update inventory", "error", err)
 				return rollback(fmt.Errorf("failed to update inventory: %v", err))
 			}
 			_ = updatedInv
@@ -122,12 +122,12 @@ func (s *orderService) CreateOrder(order models.Order) (models.Order, error) {
 
 	createdOrder, err := s.orderRepo.CreateTx(tx, order)
 	if err != nil {
-		log.Printf("Failed to save order", "error", err)
+		log.Print("Failed to save order", "error", err)
 		return rollback(errors.New("failed to save order"))
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.Printf("Failed to commit transaction", "error", err)
+		log.Print("Failed to commit transaction", "error", err)
 		return models.Order{}, errors.New("failed to commit transaction")
 	}
 

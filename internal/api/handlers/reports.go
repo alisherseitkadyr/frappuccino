@@ -5,7 +5,6 @@ import (
 	"frappuccino/internal/service"
 	"log"
 	"net/http"
-
 )
 
 type ReportsHandler struct {
@@ -19,7 +18,7 @@ func NewReportsHandler(svc service.ReportsService) *ReportsHandler {
 func (h *ReportsHandler) GetTotalSales(w http.ResponseWriter, r *http.Request) {
 	totalSales, err := h.service.GetTotalSales()
 	if err != nil {
-		log.Printf("Failed to get total sales", "error", err)
+		log.Print("Failed to get total sales", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -32,7 +31,7 @@ func (h *ReportsHandler) GetTotalSales(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Failed to encode response", "error", err)
+		log.Print("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -40,14 +39,14 @@ func (h *ReportsHandler) GetTotalSales(w http.ResponseWriter, r *http.Request) {
 func (h *ReportsHandler) GetPopularItems(w http.ResponseWriter, r *http.Request) {
 	popularItems, err := h.service.GetPopularItems(3) // Default to top 3
 	if err != nil {
-		log.Printf("Failed to get popular items", "error", err)
+		log.Print("Failed to get popular items", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(popularItems); err != nil {
-		log.Printf("Failed to encode response", "error", err)
+		log.Print("Failed to encode response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 }
@@ -71,8 +70,6 @@ func (h *ReportsHandler) SearchReportHandler(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-
-
 }
 
 func (h *ReportsHandler) OrderedItemsByPeriodHandler(w http.ResponseWriter, r *http.Request) {

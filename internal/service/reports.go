@@ -27,7 +27,7 @@ type reportsService struct {
 func NewReportsService(
 	orderRepo repository.OrderRepository,
 	menuRepo repository.MenuRepository,
-	reportRepo repository.ReportRepository, 
+	reportRepo repository.ReportRepository,
 ) ReportsService {
 	return &reportsService{
 		orderRepo: orderRepo,

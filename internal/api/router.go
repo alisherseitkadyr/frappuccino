@@ -50,6 +50,5 @@ func NewRouter(
 	mux.HandleFunc("GET /reports/orderedItemsByPeriod", reportsHandler.OrderedItemsByPeriodHandler)
 	mux.HandleFunc("GET /inventory/getLeftOvers", inventoryHandler.GetLeftOversHandler)
 
-
 	return mux
 }

@@ -12,9 +12,7 @@ type InventoryService interface {
 	GetInventoryItem(id int64) (models.InventoryItem, error)
 	UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error)
 	DeleteInventoryItem(id int64) error
-
 	GetLeftOvers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error)
-
 }
 
 type inventoryService struct {
@@ -60,7 +58,6 @@ func (s *inventoryService) DeleteInventoryItem(id int64) error {
 	return s.repo.Delete(id)
 }
 
-
 func (s *inventoryService) UpdateInventoryItem(item models.InventoryItem) (models.InventoryItem, error) {
 	if item.IngredientID == 0 {
 		return models.InventoryItem{}, errors.New("id is required")
@@ -77,7 +74,6 @@ func (s *inventoryService) UpdateInventoryItem(item models.InventoryItem) (model
 
 	return s.repo.Update(item)
 }
-
 
 func (s *inventoryService) GetLeftOvers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error) {
 	if page <= 0 {

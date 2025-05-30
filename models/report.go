@@ -17,15 +17,14 @@ type OrderSearchResult struct {
 }
 
 type SearchReportResponse struct {
-	MenuItems     []MenuItemSearchResult `json:"menu_items"`
-	Orders        []OrderSearchResult    `json:"orders"`
-	TotalMatches  int                    `json:"total_matches"`
+	MenuItems    []MenuItemSearchResult `json:"menu_items"`
+	Orders       []OrderSearchResult    `json:"orders"`
+	TotalMatches int                    `json:"total_matches"`
 }
 
-
 type OrderedItemCount struct {
-	Key   string `json:"key"` 
-	Count int    `json:"count"` 
+	Key   string `json:"key"`
+	Count int    `json:"count"`
 }
 
 type OrderedItemsByPeriodResponse struct {
