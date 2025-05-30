@@ -11,12 +11,22 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+
 	port := flag.Int("port", 8090, "Port number")
-	dbURL := flag.String("db", "postgres://latte:latte@db:5432/frappuccino?sslmode=disable", "Postgres connection URL")
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 	help := flag.Bool("help", false, "Show help")
 	flag.Parse()
 
@@ -26,7 +36,7 @@ func main() {
 	}
 
 	// Connect to the PostgreSQL database
-	db, err := sql.Open("postgres", *dbURL)
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Printf("Failed to open database connection", "error", err)
 		os.Exit(1)
