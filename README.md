@@ -60,8 +60,10 @@ Start both the application and database containers.
 3. Running the Application
 Once the Docker containers are up, the application will be available at:
 
-API: http://localhost:8090
-
+- API: 
+```bash
+http://localhost:8090
+```
 
 4. Accessing the API
 You can interact with the system using the API endpoints described below. You can test them using a tool like Postman or directly through curl.
@@ -70,17 +72,17 @@ The project provides a RESTful API to manage orders, menu items, and inventory, 
 
 API Endpoints
 Orders API
--POST /orders: Create a new order.
+- POST /orders: Create a new order.
 
--GET /orders: Retrieve all orders.
+- GET /orders: Retrieve all orders.
 
--GET /orders/{id}: Retrieve a specific order by ID.
+- GET /orders/{id}: Retrieve a specific order by ID.
 
--PUT /orders/{id}: Update an existing order.
+- PUT /orders/{id}: Update an existing order.
 
--DELETE /orders/{id}: Delete an order.
+- DELETE /orders/{id}: Delete an order.
 
--POST /orders/{id}/close: Close an order.
+- POST /orders/{id}/close: Close an order.
 
 Example Request to Create an Order
 
@@ -97,40 +99,40 @@ Content-Type: application/json
 }
 ```
 Menu Items API
--POST /menu: Add a new menu item.
+- POST /menu: Add a new menu item.
 
--GET /menu: Retrieve all menu items.
+- GET /menu: Retrieve all menu items.
 
--GET /menu/{id}: Retrieve a specific menu item by ID.
+- GET /menu/{id}: Retrieve a specific menu item by ID.
 
--PUT /menu/{id}: Update a menu item.
+- PUT /menu/{id}: Update a menu item.
 
 DELETE /menu/{id}: Delete a menu item.
 
 Inventory API
--POST /inventory: Add a new inventory item.
+- POST /inventory: Add a new inventory item.
 
--GET /inventory: Retrieve all inventory items.
+- GET /inventory: Retrieve all inventory items.
 
--GET /inventory/{id}: Retrieve a specific inventory item by ID.
+- GET /inventory/{id}: Retrieve a specific inventory item by ID.
 
--PUT /inventory/{id}: Update an inventory item.
+- PUT /inventory/{id}: Update an inventory item.
 
--DELETE /inventory/{id}: Delete an inventory item.
+- DELETE /inventory/{id}: Delete an inventory item.
 
 Reporting and Aggregation Endpoints
--GET /reports/total-sales: Get the total sales amount for the specified period.
+- GET /reports/total-sales: Get the total sales amount for the specified period.
 
--GET /reports/popular-items: Get a list of popular menu items based on sales.
+- GET /reports/popular-items: Get a list of popular menu items based on sales.
 
 
 Number of Ordered Items
--GET /orders/numberOfOrderedItems?startDate={startDate}&endDate={endDate}
+- GET /orders/numberOfOrderedItems?startDate={startDate}&endDate={endDate}
 
 Returns a list of ordered items and their quantities for a specified time period.
 
 Full Text Search Report
--GET /reports/search?q={query}&filter={filter}&minPrice={minPrice}&maxPrice={maxPrice}
+- GET /reports/search?q={query}&filter={filter}&minPrice={minPrice}&maxPrice={maxPrice}
 
 Search through orders, menu items, and customers with partial matching and ranking.
 
@@ -141,7 +143,7 @@ q: Search query string (required).
 filter: Comma-separated list of filters: orders, menu, or all (optional).
 
 Get Leftovers
--GET /inventory/getLeftOvers?sortBy={value}&page={page}&pageSize={pageSize}
+- GET /inventory/getLeftOvers?sortBy={value}&page={page}&pageSize={pageSize}
 
 Returns leftover inventory items, with sorting and pagination.
 
