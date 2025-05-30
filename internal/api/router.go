@@ -45,9 +45,10 @@ func NewRouter(
 	// Reports endpoints
 	mux.HandleFunc("GET /reports/total-sales", reportsHandler.GetTotalSales)
 	mux.HandleFunc("GET /reports/popular-items", reportsHandler.GetPopularItems)
+	
 	mux.HandleFunc("GET /orders/numberOfOrderedItems", orderHandler.GetNumberOfOrderedItems)
 	mux.HandleFunc("GET /reports/search", reportsHandler.SearchReportHandler)
-	mux.HandleFunc("GET /reports/orderedItemsByPeriod", reportsHandler.OrderedItemsByPeriodHandler)
+	mux.HandleFunc("GET /reports/orderedItemsByPeriod", reportsHandler.OrderedItemsByPeriodHandler) //not done
 	mux.HandleFunc("GET /inventory/getLeftOvers", inventoryHandler.GetLeftOversHandler)
 
 	return mux

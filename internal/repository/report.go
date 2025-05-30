@@ -108,14 +108,13 @@ func contains(slice []string, value string) bool {
 func (r *reportRepository) GetOrderedItemsByDay(year int, month time.Month) (map[int]int, error) {
 	query := `
 		SELECT EXTRACT(DAY FROM day) AS day, COUNT(*) AS count
-FROM (
-  SELECT DATE(created_at) AS day
-  FROM orders
-  WHERE created_at >= DATE_TRUNC('month', MAKE_DATE($1, $2, 1))
-    AND created_at <  DATE_TRUNC('month', MAKE_DATE($1, $2, 1)) + INTERVAL '1 month'
-) sub
-GROUP BY day
-ORDER BY day;`
+		FROM (
+  		SELECT DATE(created_at) AS day
+  		FROM orders
+  		WHERE created_at >= DATE_TRUNC('month', MAKE_DATE($1, $2, 1))
+    	AND created_at <  DATE_TRUNC('month', MAKE_DATE($1, $2, 1)) + INTERVAL '1 month') sub
+		GROUP BY day
+		ORDER BY day;`
 	rows, err := r.db.Query(query, year, int(month))
 	if err != nil {
 		return nil, err

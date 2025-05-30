@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8090:8090"
     environment:
       - DB_HOST=db
       - DB_USER=latte
@@ -17,8 +17,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-
   db:
     image: postgres:15
     environment:

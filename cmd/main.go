@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/lib/pq" // Postgres driver import for side effects only
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	port := flag.Int("port", 8080, "Port number")
+	port := flag.Int("port", 8090, "Port number")
 	dbURL := flag.String("db", "postgres://latte:latte@db:5432/frappuccino?sslmode=disable", "Postgres connection URL")
 	help := flag.Bool("help", false, "Show help")
 	flag.Parse()

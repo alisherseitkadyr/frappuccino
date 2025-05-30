@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"frappuccino/models"
+	"time"
 )
 
 type InventoryRepository interface {
@@ -11,7 +12,7 @@ type InventoryRepository interface {
 	GetAll() ([]models.InventoryItem, error)
 	GetByID(id int64) (models.InventoryItem, error)
 	Update(item models.InventoryItem) (models.InventoryItem, error)
-	UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) // 👈 добавь этот метод
+	UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error)
 	Delete(id int64) error
 	GetLeftOvers(sortBy string, offset, limit int) ([]models.InventoryItem, int, error)
 }
@@ -25,13 +26,15 @@ func NewInventoryRepository(db *sql.DB) InventoryRepository {
 }
 
 func (r *inventoryRepository) Create(item models.InventoryItem) (models.InventoryItem, error) {
-	query := `INSERT INTO inventory (name, quantity) VALUES ($1, $2) RETURNING id`
-	err := r.db.QueryRow(query, item.Name, item.Quantity).Scan(&item.IngredientID)
+	query := `INSERT INTO inventory (name, quantity, unit, created_at) VALUES ($1, $2, $3, $4) RETURNING ingredient_id`
+	createdAt := time.Now()
+	err := r.db.QueryRow(query, item.Name, item.Quantity, item.Unit, createdAt).Scan(&item.IngredientID)
+	item.CreatedAt=createdAt
 	return item, err
 }
 
 func (r *inventoryRepository) GetAll() ([]models.InventoryItem, error) {
-	query := `SELECT ingredient_id, name, quantity FROM inventory`
+	query := `SELECT ingredient_id, name, quantity, unit, created_at, updated_at FROM inventory`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -41,7 +44,7 @@ func (r *inventoryRepository) GetAll() ([]models.InventoryItem, error) {
 	var items []models.InventoryItem
 	for rows.Next() {
 		var item models.InventoryItem
-		if err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity); err != nil {
+		if err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -50,9 +53,9 @@ func (r *inventoryRepository) GetAll() ([]models.InventoryItem, error) {
 }
 
 func (r *inventoryRepository) GetByID(id int64) (models.InventoryItem, error) {
-	query := `SELECT ingredient_id, name, quantity FROM inventory WHERE ingredient_id = $1`
+	query := `SELECT ingredient_id, name, quantity, unit, created_at, updated_at FROM inventory WHERE ingredient_id = $1`
 	var item models.InventoryItem
-	err := r.db.QueryRow(query, id).Scan(&item.IngredientID, &item.Name, &item.Quantity)
+	err := r.db.QueryRow(query, id).Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit,  &item.CreatedAt, &item.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return models.InventoryItem{}, ErrNotFound
 	}
@@ -60,8 +63,10 @@ func (r *inventoryRepository) GetByID(id int64) (models.InventoryItem, error) {
 }
 
 func (r *inventoryRepository) Update(item models.InventoryItem) (models.InventoryItem, error) {
-	query := `UPDATE inventory SET name = $1, quantity = $2 WHERE ingredient_id = $3`
-	result, err := r.db.Exec(query, item.Name, item.Quantity, item.IngredientID)
+	query := `UPDATE inventory SET name = $1, quantity = $2, unit = $3, updated_at = $5 WHERE ingredient_id = $4`
+	updated_at:=time.Now()
+	result, err := r.db.Exec(query, item.Name, item.Quantity, item.Unit, item.IngredientID, updated_at)
+	item.UpdatedAt=updated_at
 	if err != nil {
 		return models.InventoryItem{}, err
 	}
@@ -86,8 +91,8 @@ func (r *inventoryRepository) Delete(id int64) error {
 }
 
 func (r *inventoryRepository) UpdateTx(tx *sql.Tx, item models.InventoryItem) (models.InventoryItem, error) {
-	query := "UPDATE inventory SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = ?"
-	_, err := tx.Exec(query, item.Quantity, item.IngredientID)
+	query := "UPDATE inventory SET quantity = $1, unit = $2, updated_at = CURRENT_TIMESTAMP WHERE ingredient_id = $3"
+	_, err := tx.Exec(query, item.Quantity, item.Unit, item.IngredientID)
 	if err != nil {
 		return models.InventoryItem{}, err
 	}

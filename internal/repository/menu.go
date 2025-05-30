@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"frappuccino/models"
 
 	"github.com/lib/pq"
@@ -40,18 +41,26 @@ func (r *menuRepository) Create(item models.MenuItem) (models.MenuItem, error) {
 		}
 	}()
 
+	var existingProductID int64
+	checkQuery := `SELECT product_id FROM menu_items WHERE product_name = $1`
+	err = tx.QueryRow(checkQuery, item.Name).Scan(&existingProductID)
+
+	if err == nil {
+		return item, fmt.Errorf("menu item with name '%s' already exists", item.Name)
+	}
+
 	query := `INSERT INTO menu_items (product_name, description, categories, price) 
 	          VALUES ($1, $2, $3, $4) RETURNING product_id`
 	err = tx.QueryRow(query, item.Name, item.Description, pq.Array(item.Categories), item.Price).Scan(&item.ID)
 	if err != nil {
-		return item, err
+		return item, fmt.Errorf("failed to insert menu item: %w", err)
 	}
 
 	for _, ing := range item.Ingredients {
 		ingQuery := `INSERT INTO menu_item_ingredients (ingredient_id, product_id, quantity) VALUES ($1, $2, $3)`
 		_, err = tx.Exec(ingQuery, ing.IngredientID, item.ID, ing.Quantity)
 		if err != nil {
-			return item, err
+			return item, fmt.Errorf("failed to insert ingredient for product_id %d: %w", item.ID, err)
 		}
 	}
 

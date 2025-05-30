@@ -168,7 +168,6 @@ func (s *reportsService) GetOrderedItemsByPeriod(period, month, year string) (mo
 			return resp, err
 		}
 
-		// Формируем массив по дням месяца
 		var items []models.OrderedItemCount
 		daysInMonth := 31 // можно оптимизировать, но для простоты 31
 		for i := 1; i <= daysInMonth; i++ {
@@ -197,7 +196,6 @@ func (s *reportsService) GetOrderedItemsByPeriod(period, month, year string) (mo
 			return resp, err
 		}
 
-		// Формируем массив месяцев в нужном порядке
 		monthsOrder := []string{
 			"january", "february", "march", "april", "may", "june",
 			"july", "august", "september", "october", "november", "december",
